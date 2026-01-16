@@ -11,14 +11,14 @@ Bu rehber **Oracle Cloud, Google Cloud (GCP), Alibaba Cloud, AWS, Azure** ve **D
 Körlemesine servis kapatmayın. Önce neyin çalıştığını görün. **Listede gördüğünüz servislerin ne işe yaradığını öğrenmek için [Servis Sözlüğü](service-glossary.md) sayfasına bakın.**
 
 === "Debian / Ubuntu"
-`   systemctl list-units --type=service --all
+`  systemctl list-units --type=service --all
     # Veya sadece çalışanları görmek için:
     systemctl list-units --type=service --state=running
-  `
+ `
 
 === "CentOS / RHEL"
-`   systemctl list-units --type=service --state=running
-  `
+`  systemctl list-units --type=service --state=running
+ `
 
 ---
 
@@ -52,14 +52,21 @@ Sunucuda yazıcı, modem veya ses kartı yoktur.
 
 === "Temizlik Komutu"
 
-````bash # Servisleri durdur
+```bash # Servisleri durdur
 sudo systemctl stop cups cups-browsed bluetooth ModemManager udisks2
 sudo systemctl disable cups cups-browsed bluetooth ModemManager udisks2
 
-    # Paketleri tamamen sil (Ubuntu/Debian) - Agresif Temizlik
-    sudo apt purge -y cups* bluez* alsa-utils ModemManager
-    sudo apt autoremove -y
-    ```
+# (Opsiyonel) Eğer tamamen silmek isterseniz:
+# sudo apt purge -y cups* bluez* alsa-utils ModemManager
+# sudo apt autoremove -y
+```
+
+!!! info "Hata Alırsanız Sevinin! 🎉"
+Eğer `Failed to stop... unit not loaded` hatası alırsanız, bu harika bir haberdir! O servis zaten sisteminizde yüklü değil demektir. Hiçbir şey yapmanıza gerek yok.
+
+!!! tip "Kapatmak mı, Silmek mi?"
+_ **Disable:** "Şimdilik çalışma ama dosyalar dursun, belki lazım olur." (Güvenli)
+_ **Mask:** "Asla ve asla çalışma, kimse seni çağıramazsın." (Daha Güvenli) \* **Purge:** "Kökten sil, dosyalarını da yok et." (En Temiz - Paket adını küçük harfle yazın!)
 
 ### Adım 2: snapd (Snap Paket Yöneticisi)
 
@@ -83,7 +90,7 @@ snap list
 sudo systemctl stop snapd snapd.socket
 sudo systemctl disable snapd snapd.socket
 # sudo apt purge snapd -y  # Sadece Ubuntu/Debian ve eminseniz!
-````
+```
 
 ---
 
