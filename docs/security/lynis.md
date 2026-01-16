@@ -29,10 +29,9 @@ Tarama sonucunda muhtemelen şunları göreceksiniz:
 **Çözüm:** Bu bir "hata" değil, eksikliktir. Linux sunucularda antivirüs şart değildir ama "Rootkit Hunter" kurmak iyi bir pratiktir.
 **Kurulum (Opsiyonel):**
 
-```bash
-sudo apt install -y rkhunter
-sudo rkhunter --propupd # Veritabanını güncelle
-```
+> **Detaylı Rehber:** ClamAV ve Rkhunter kurulumu için [Malware & Rootkit Taraması](malware.md) sayfasına bakın.
+
+_(Aşağıdaki komutlar yerine detaylı rehberi uygulamanız önerilir)_
 
 ### ⚠️ Security repository not found (PKGS-7388)
 

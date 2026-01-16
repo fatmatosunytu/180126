@@ -2,142 +2,201 @@
 
 Sanal sunucular (VPS), genellikle çok amaçlı imajlardan türetilir. Bu imajlar, "her duruma uysun" diye ihtiyacınız olmayan onlarca servisle yüklü gelir.
 
-Bu rehber **Oracle Cloud, Google Cloud (GCP), Alibaba Cloud** ve **AWS** üzerindeki **Ubuntu, Debian ve CentOS** sistemleri için geçerlidir.
+Bu rehber **Oracle Cloud, Google Cloud (GCP), Alibaba Cloud, AWS, Azure** ve **DigitalOcean** üzerindeki **Ubuntu, Debian ve CentOS** sistemleri için geçerlidir.
 
 ---
 
 ## 1. Analiz: Neyin Çalıştığını Gör
 
-Körlemesine servis kapatmayın. Önce neyin çalıştığını görün.
+Körlemesine servis kapatmayın. Önce neyin çalıştığını görün. **Listede gördüğünüz servislerin ne işe yaradığını öğrenmek için [Servis Sözlüğü](service-glossary.md) sayfasına bakın.**
 
 === "Debian / Ubuntu"
-`bash
+`   systemctl list-units --type=service --all
+    # Veya sadece çalışanları görmek için:
     systemctl list-units --type=service --state=running
-    `
+  `
 
 === "CentOS / RHEL"
-`bash
-    systemctl list-units --type=service --state=running
-    `
+`   systemctl list-units --type=service --state=running
+  `
 
-## 2. Evrensel Gereksizler (Bloatware)
+---
 
-Hangi bulut sağlayıcısında olursanız olun, bir sunucuda bunlara ihtiyacınız yoktur.
+## 2. Hızlı Referans Tablosu ⚡️
 
-### Yazıcı ve Çevre Birimleri
+Hangi servise ne yapacağınıza karar veremiyorsanız bu tabloyu kullanın:
 
-Sunucunun yazıcısı, tarayıcısı veya ses kartı (genelde) yoktur.
+| Servis            | Ne Yapar        | Kapatılabilir mi?                 | Risk       |
+| ----------------- | --------------- | --------------------------------- | ---------- |
+| **cups**          | Yazıcı yönetimi | ✅ **EVET**                       | Yok        |
+| **bluetooth**     | Bluetooth       | ✅ **EVET**                       | Yok        |
+| **ModemManager**  | Modem/SIM       | ✅ **EVET**                       | Yok        |
+| **rpcbind**       | NFS port map    | ⚠️ NFS yoksa EVET                 | Düşük      |
+| **multipathd**    | Çoklu disk yolu | ⚠️ SAN yoksa EVET                 | Orta       |
+| **iscsid**        | iSCSI disk      | ❌ **HAYIR** (Block Volume varsa) | **Yüksek** |
+| **cloud-init**    | İlk boot ve IP  | ❌ **ASLA**                       | **Kritik** |
+| **snapd**         | Snap paketler   | ⚠️ Agent veya App yoksa           | Orta       |
+| **postfix/exim4** | Mail gönderme   | ⚠️ Cron/Fail2ban yoksa            | Düşük      |
+| **firewalld**     | Firewall        | ⚠️ UFW kurulacaksa EVET           | Orta       |
+| **vnstat**        | Trafik izleme   | ✅ İsteğe bağlı                   | Yok        |
 
-- **cups:** Linux yazdırma servisi (Common Unix Printing System).
-- **bluetooth:** Bluetooth donanımı yönetimi.
-- **alsa / pulseaudio:** Ses yönetimi.
+---
+
+## 3. Güvenli Temizlik Sırası 🎯
+
+**ASLA** tüm servisleri aynı anda kapatmayın! Adım adım ilerleyin.
+
+### Adım 1: Kesinlikle Gereksizler (Bloatware)
+
+Sunucuda yazıcı, modem veya ses kartı yoktur.
 
 === "Temizlik Komutu"
 
 ````bash # Servisleri durdur
-sudo systemctl stop cups cups-browsed bluetooth
-sudo systemctl disable cups cups-browsed bluetooth
+sudo systemctl stop cups cups-browsed bluetooth ModemManager udisks2
+sudo systemctl disable cups cups-browsed bluetooth ModemManager udisks2
 
-    # Paketleri tamamen sil (Ubuntu/Debian)
-    sudo apt purge -y cups* bluez* alsa-utils
+    # Paketleri tamamen sil (Ubuntu/Debian) - Agresif Temizlik
+    sudo apt purge -y cups* bluez* alsa-utils ModemManager
     sudo apt autoremove -y
     ```
 
-### Masaüstü Kalıntıları
+### Adım 2: snapd (Snap Paket Yöneticisi)
 
-Eğer "Minimal" olmayan bir imaj kullandıysanız şunlar olabilir:
+Canonical'ın konteyner tabanlı paket sistemi.
 
-- **ModemManager:** USB Modem/SIM kart yönetimi (Sunucuda 4G modül yoksa gereksiz).
-- **udisks2:** Masaüstü ortamları için disk otomatik bağlama aracı.
+**Kapatmalı mıyım?**
+
+- **HAYIR:** Eğer `snap list` çıktısında şunlar varsa:
+  - `oracle-cloud-agent` (Oracle Cloud)
+  - `amazon-ssm-agent` (AWS)
+  - `google-cloud-ops-agent` (GCP)
+  - `core`, `snapd`, `lxd` (Sistem bileşenleri)
+  - `certbot` (Eğer snap ile kurulduysa)
+- **EVET:** Liste tamamen boşsa VE snap kullanmayacaksanız.
 
 ```bash
-sudo systemctl stop ModemManager udisks2
-sudo systemctl disable ModemManager udisks2
+# Kontrol et
+snap list
+
+# Eğer liste BOŞSA veya gereksizse:
+sudo systemctl stop snapd snapd.socket
+sudo systemctl disable snapd snapd.socket
+# sudo apt purge snapd -y  # Sadece Ubuntu/Debian ve eminseniz!
 ````
 
 ---
 
-## 3. Depolama ve Ağ Servisleri
+### Adım 3: Ağ ve Depolama (Kontrollü Gidin)
 
-### Multipath Tools (`multipathd`) Nedir?
+#### Multipath Tools (`multipathd`)
 
-**Durum:** Oracle Cloud ve Enterprise RHEL/CentOS imajlarında sıkça görülür.
-**Ne Yapar?** Sunucuya bağlı bir diske giden birden fazla kablo/yol (path) varsa, biri koparsa diğerinden devam etmeyi sağlar.
-**Kapatmalı mıyım?** **EVET:** Eğer sunucunuz standart bir VM ise ve sadece **Boot Volume** kullanıyorsanız. Veya ek diskiniz (`/dev/sdb`) olsa bile `/dev/mapper` altında görünmüyorsa.
+**Kapatmalı mıyım?**
 
+- **EVET:** Standart bir VM ise ve sadece **Boot Volume** kullanıyorsanız. Ek diskiniz (`/dev/sdb`) olsa bile `/dev/mapper` altında görünmüyorsa.
 - **HAYIR:** Kurumsal SAN/iSCSI yapısında, diski `/dev/mapper/mpatha` gibi bir isimle kullanıyorsanız.
 
-**Kontrol (Emin Değilseniz):**
+#### iSCSI Servisi (`iscsid`) - DİKKAT! ⛔
 
-```bash
-lsblk
-# Çıktıda diskler "sdb -> sdb1" şeklindeyse Multipath YOKTUR -> Kapatın.
-# Çıktıda "sdb -> mpatha" görüyorsanız Multipath VARDIR -> Dokunmayın.
-```
+**Oracle Cloud Block Volume kullanıcıları için HAYATİDİR.**
 
-**Kapatma:**
+- **HAYIR:** Eklediğiniz Block Volume'ler iSCSI protokolü ile çalışır. Kapatırsanız diskiniz ve veriniz kaybolur!
+- **EVET:** Sadece Boot Volume kullanıyorsanız ve gelecekte de disk eklemeyecekseniz (Sadece bu durumda).
 
-```bash
-sudo systemctl stop multipathd
-sudo systemctl disable multipathd
-```
+#### RPC Bind (`rpcbind`)
 
-### RPC Bind (`rpcbind`)
-
-**Durum:** Her yerde çıkabilir.
-**Ne Yapar?** NFS (Dosya paylaşımı) için port haritalaması yapar.
-**Kapatmalı mıyım?** Başka bir sunucudan klasör bağlamıyorsanız (`mount nfs...`) kapatın. Güvenlik riski oluşturur (DDoS tetikleyicisi olabilir).
+**Kapatmalı mıyım?** NFS (Dosya Paylaşımı) kullanmıyorsanız kapatın.
 
 ```bash
 sudo systemctl stop rpcbind
-sudo systemctl stop rpcbind.socket
 sudo systemctl disable rpcbind
+sudo systemctl stop rpcbind.socket
 sudo systemctl disable rpcbind.socket
 ```
 
 ---
 
-## 4. Dağıtıma Özel Notlar
+## 4. Kritik Uyarılar! ⚠️
 
-### Ubuntu / Debian
+### Firewall Çakışması
 
-- **snapd:** Canonical'ın paket yöneticisi. Bazı kullanıcılar _Snap_ paketlerini yavaş ve "bloat" bulur. Eğer `docker` veya `apt` kullanıyorsanız Snap'i tamamen silebilirsiniz.
-  - _Uyarı:_ `certbot` kuracaksanız Ubuntu bazen snap ile kurmayı önerir. Alternatifini (`pip` veya `apt`) bildiğinizden emin olun.
-- **unattended-upgrades:** **SİLMEYİN.** Güvenlik güncellemelerini yapar.
-- **fwupd:** Firmware update. Sanal sunucuda gereksizdir, silebilirsiniz.
+**ASLA** iki firewall servisi aynı anda çalışmamalıdır.
 
-### CentOS / RHEL / Fedora
+- **Ubuntu:** `ufw` kullanıyorsanız `firewalld` veya `iptables-persistent` çakışabilir.
+- **CentOS:** `firewalld` varsayılandır. `ufw` kuracaksanız `firewalld` KAPATILMALIDIR.
 
-- **postfix:** RHEL tabanında varsayılan yüklü gelir (Sadece local mail için). Dışarıya mail atmıyorsanız silebilirsiniz veya `inet_interfaces = localhost` yaptığınızdan emin olun.
-- **firewalld:** Eğer bizim rehberdeki gibi **UFW** kuracaksanız, `firewalld` servisini mutlaka kapatın. İkisi çakışır.
-  ```bash
-  sudo systemctl stop firewalld && sudo systemctl disable firewalld
-  ```
-- **tuned:** Performans profili aracıdır. **Silmeyin**, "virtual-guest" profilinde çalıştığından emin olun (`tuned-adm active`).
+```bash
+# CentOS için Firewalld kapatma (Eğer UFW kullanacaksanız):
+sudo systemctl stop firewalld && sudo systemctl disable firewalld
+sudo systemctl mask firewalld # Tekrar açılmasını engeller
+```
+
+### Mail Transfer Agent (MTA)
+
+**Postfix** (CentOS) veya **Exim4** (Ubuntu).
+Sistem e-postaları (Cron, Fail2Ban bildirimleri) için kullanılır. Dışarıya mail atmayacaksanız:
+
+1.  **Güvenli:** Sadece `localhost` dinlemesini sağlayın (`inet_interfaces = loopback-only`).
+2.  **Agresif:** Tamamen kapatın (Log takibi zorlaşabilir).
+
+```bash
+# Kapatmak için:
+sudo systemctl stop postfix exim4
+sudo systemctl disable postfix exim4
+```
+
+### Getty Servisleri (ARM Sunucular Dikkat!)
+
+- `getty@tty1` -> Fiziksel konsol.
+- `serial-getty@ttyAMA0` -> **ARM (Oracle Ampere) Serial Console.**
+
+**UYARI:** Oracle Cloud ARM sunucularda `serial-getty@ttyAMA0` servisini **SAKIN KAPATMAYIN**. SSH erişiminiz kesilirse sunucuyu kurtarmanın tek yolu Web Konsol'dur ve o da bu servise bağlıdır.
 
 ---
 
-## 5. Bulut Ajanları (Cloud Agents) - DOKUNMAYIN!
+## 5. Bulut Ajanları (Cloud Agents) - DOKUNMAYIN! ⛔
 
-Bulut sağlayıcıları, sunucuyu yönetmek (şifre sıfırlama, metrik izleme, IP atama) için kendi ajanlarını yükler. Bunları silmek risklidir.
+Her bulut sağlayıcısı yönetimi için kendi ajanını yükler. **Silerseniz Reboot/Reset Password özellikleri bozulur.**
 
-- **Genel:** `cloud-init` (İlk açılış ayarları - **ASLA SİLMEYİN**)
-- **Oracle:** `oracle-cloud-agent` (Monitoring ve yönetim için, genelde kalsın).
-- **Google Cloud:** `google-guest-agent`, `google-oslogin-agent` (SSH anahtarlarını yönetir. Silerseniz panele erişemeyebilirsiniz!).
-- **Alibaba:** `aliyun-service` (Aliyun Assist). Alibaba'nın yönetim aracıdır.
+### Evrensel
 
-> [!WARNING]
-> Bu ajanları "casusluk yapıyor" diye silenler olur ancak sildiğinizde sunucu yönetim panelindeki "Reboot", "Reset Password" veya "Graphs" özellikleri çalışmayabilir. Ne yaptığınızdan %100 emin değilseniz dokunmayın.
+- **cloud-init:** Tüm bulutlarda (AWS, GCP, Oracle, Azure) vardır. İlk IP ve Key ayarlarını yapar. **ASLA SİLMEYİN.**
+
+### Oracle Cloud Infrastructure (OCI)
+
+- **Servisler:** `oracle-cloud-agent`, `oracle-cloud-agent-updater`
+- **Not:** Genelde Snap veya Systemd servisidir. Dokunmayın.
+
+### Google Cloud Platform (GCP)
+
+- **Servisler:** `google-guest-agent` (Metadata/Network), `google-oslogin-agent` (SSH Key Yönetimi)
+- **Risk:** Silerseniz GCP Console'dan SSH yapamazsınız.
+
+### Amazon Web Services (AWS)
+
+- **Servisler:** `amazon-ssm-agent`, `amazon-cloudwatch-agent`
+- **Risk:** SSM Session Manager erişimi kaybolur.
+
+### Alibaba & Azure & DigitalOcean
+
+- **Alibaba:** `aliyun-service`
+- **Azure:** `walinuxagent` (waagent)
+- **DigitalOcean:** `digitalocean-agent`
+- **Hetzner:** `hcloud-init`
+
+> **Genel Kural:** Servis adında `agent`, `guest`, `monitoring` veya sağlayıcı adı (`oracle`, `aws` vb.) geçiyorsa **DOKUNMAYIN.**
 
 ---
 
-## Özet Kontrol Listesi
+## 6. Son Kontrol Listesi ✅
 
 Temizlik sonrası son bir kontrol için şu komutu çalıştırıp "kırmızı bayrak" listedekiler var mı bakın:
 
 ```bash
-# Şüphelileri ara
-sudo systemctl list-units --type=service --state=running | grep -E "cups|blue|Modem|rpcbind|postfix|exim4|multipath"
+# Gereksiz servis kontrolü:
+sudo systemctl list-units --type=service --state=running | \
+  grep -iE "cups|bluetooth|modem|rpcbind|postfix|exim4|multipath|vnstat|udisks2|polkit|alsa|pulse"
 ```
 
-Çıktı boşsa sunucunuz fit ve güvenli demektir. 🚀
+- **Çıktı BOŞSA:** Mükemmel! 🎉 Sunucunuz temiz ve güvenli.
+- **Çıktı VARSA:** Listeyi ve yukarıdaki "İstisnalar"ı tekrar kontrol edin.
