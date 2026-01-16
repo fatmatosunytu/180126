@@ -59,11 +59,19 @@ nav:
       - Genel: architecture/index.md
       - Genel Bakis: architecture/overview.md
       - Ag Tasarimi: architecture/network.md
+      - Docker Gateway Mimarisi: architecture/docker-gateway.md
       - Operasyon: architecture/operations.md
+  - Bulut Altyapisi:
+      - Oracle Cloud:
+          - Genel Bakis: cloud/oracle/overview.md
+          - CLI & Araclar: cloud/oracle/cli.md
+          - Network (VCN): cloud/oracle/network.md
+          - Block Volume (Storage): cloud/oracle/storage.md
   - Kurulum:
       - Genel: how-to/index.md
       - Temel OS: how-to/base-os.md
       - Swap Bellek: how-to/swap.md
+      - Docker & Storage: how-to/docker.md
       - Nginx: how-to/nginx.md
       - Reverse Proxy: how-to/reverse-proxy.md
       - TLS: how-to/tls.md
@@ -82,9 +90,18 @@ nav:
       - Fail2ban: security/fail2ban.md
       - SSHGuard: security/sshguard.md
       - CrowdSec: security/crowdsec.md
-      - UFW Rate Limit: security/ufw-rate-limit.md
+
       - Otomatik Guncellemeler: security/updates.md
+      - Kernel Hardening (Sysctl): security/sysctl.md
+      - Servis Temizligi: security/services.md
+      - Hacker Tuzaklama (Tarpit): security/tarpit.md
       - Lynis: security/lynis.md
+  - Referans:
+      - Linux Komutlari:
+          - Dosya Islemleri: reference/commands/file.md
+          - Disk & Kaynak: reference/commands/disk.md
+          - Ag & Port: reference/commands/network.md
+          - Sistem & Servis: reference/commands/system.md
   - Runbooks:
       - Genel: runbooks/index.md
       - Olay Yonetimi: runbooks/incident-response.md
