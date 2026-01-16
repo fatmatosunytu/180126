@@ -1,64 +1,136 @@
-# Guvenlik Guncellemeleri
+# Otomatik Güvenlik Güncellemeleri
 
-Bu bolum, otomatik guvenlik guncellemelerini etkinlestirir.
+Sunucunuzun güvenliği için en kritik adım, güvenlik yamalarını zamanında almaktır. **Unattended Upgrades**, bu işi sizin yerinize sessizce halleder.
 
-## Gereksinimler
+## 1. Kurulum
 
-- Root veya sudo yetkisi
-
-## Kurulum
+Paketi kurun:
 
 ```bash
-apt update
-apt install -y unattended-upgrades
+sudo apt update
+sudo apt install -y unattended-upgrades apt-listchanges
 ```
 
-## Konfigurasyon
+## 2. Aktifleştirme (Otomatikleştirme)
 
-## Konfigürasyon
+Çoğu rehber `dpkg-reconfigure` kullanır ama bu interaktiftir (otomasyona gelmez). Biz doğrudan ayar dosyasını oluşturacağız.
 
-Ana yapılandırma dosyası: `/etc/apt/apt.conf.d/50unattended-upgrades`.
+Şu dosyayı oluşturun/düzenleyin: `/etc/apt/apt.conf.d/20auto-upgrades`
 
-Dosyayı açın ve aşağıdaki satırların başındaki `//` yorum işaretlerini kaldırarak düzenleyin:
+```bash
+sudo nano /etc/apt/apt.conf.d/20auto-upgrades
+```
+
+İçeriği şöyle olmalı:
+
+```apt
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
+```
+
+- **Update-Package-Lists "1":** Her gün paket listesini güncelle (`apt update`).
+- **Unattended-Upgrade "1":** Her gün güncellemeleri kur (`apt upgrade`).
+- **AutocleanInterval "7":** 7 günde bir önbelleği temizle.
+
+## 3. Konfigürasyon (Zamanlama ve Reboot)
+
+Ana ayarlar `/etc/apt/apt.conf.d/50unattended-upgrades` dosyasındadır.
+Burası "Neleri güncelleyeyim?" ve "Reboot edeyim mi?" sorularının cevabıdır.
+
+Dosyayı açın:
+
+```bash
+sudo nano /etc/apt/apt.conf.d/50unattended-upgrades
+```
+
+Bu dosyada çoğu ayar `//` ile yorum satırı halindedir. Aşağıdaki adımları izleyin:
+
+1.  **Allowed-Origins (Kontrol Edin):**
+    Genelde varsayılan olarak açıktır. `${distro_id}:${distro_codename}-security` satırının başında `//` **olmadığından** emin olun.
+
+    ```javascript
+    Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}-security";
+    };
+    ```
+
+2.  **Temizlik ve Reboot (Aktif Hale Getirin):**
+    Bu satırlar varsayılan olarak **kapalıdır** (`//` ile başlar). Başındaki `//` işaretlerini silerek açın:
+
+    ```javascript
+    // Gereksiz kernel ve bağımlılıkları temizle
+    Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+    Unattended-Upgrade::Remove-Unused-Dependencies "true";
+
+    // Otomatik Yeniden Başlatma
+    Unattended-Upgrade::Automatic-Reboot "true";
+    Unattended-Upgrade::Automatic-Reboot-Time "04:00";
+    ```
+
+> [!WARNING] > **Automatic Reboot:** Kernel güncellemeleri yeniden başlatma gerektirir. Eğer bunu açarsanız, sunucunuz gece 04:00'te kapanıp açılabilir. Docker konteynerlerinizin `restart: always` modunda olduğundan emin olun!
+
+## 4. İleri Düzey Ayarlar
+
+### Paket Engelleme (Blacklist)
+
+Bazen bir güncelleme sisteminizi bozabilir (örn: Nginx konfigürasyonu değişebilir). O paketi güncellemelerden hariç tutmak için `Package-Blacklist` kısmını kullanın.
+
+`/etc/apt/apt.conf.d/50unattended-upgrades` dosyasında:
 
 ```javascript
-/* KRITİK: Sadece güvenlik güncellemelerini al */
-Unattended-Upgrade::Allowed-Origins {
-    "${distro_id}:${distro_codename}-security";
-    // "${distro_id}:${distro_codename}-updates"; // Opsiyonel: Normal güncellemeler
+Unattended-Upgrade::Package-Blacklist {
+    "nginx";
+    "libc6";
+    "libc6-dev";
+    // Regex de kullanabilirsiniz:
+    // "linux-image.*";
 };
+```
 
-/* E-posta bildirimi (mailx veya postfix kuruluysa) */
+### Diğer Depoları (Docker, Nginx) Dahil Etme
+
+Varsayılan olarak sadece Ubuntu güvenlik yamaları alınır. Eğer Docker veya Nginx gibi dış kaynaklardan kurduğunuz paketlerin de güncellenmesini istiyorsanız `Allowed-Origins` kısmına ekleme yapmalısınız.
+
+Ancak bu biraz karmaşıktır (`origin` ve `suite` değerlerini bilmeniz gerekir). Genelde güvenlik için sadece temel OS güncellemelerini açık tutmak ve uygulama güncellemelerini (Docker gibi) manuel yapmak daha güvenlidir.
+
+### E-Posta Bildirimi
+
+Güncellemelerden haberdar olmak isterseniz (mailx veya postfix gerekir):
+
+```javascript
 Unattended-Upgrade::Mail "admin@example.com";
-Unattended-Upgrade::MailReport "on-change"; // Sadece değişiklik olunca yaz
-
-/* Gereksiz kernel ve paketleri temizle */
-Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
-Unattended-Upgrade::Remove-Unused-Dependencies "true";
-
-/* Otomatik Yeniden Başlatma (Production İçin Kritik) */
-/* Kernel güncellemesi gelirse sunucuyu gece 04:00'te yeniden başlat */
-Unattended-Upgrade::Automatic-Reboot "true";
-Unattended-Upgrade::Automatic-Reboot-Time "04:00";
+Unattended-Upgrade::MailReport "on-change"; // Sadece güncelleme olursa yaz
 ```
 
-Aktifleştirmek için öncelik ayarını yapın:
+## 5. Test Etme (Dry Run)
+
+Yaptığımız ayarlar çalışıyor mu? Simülasyon yapalım:
 
 ```bash
-sudo dpkg-reconfigure --priority=low unattended-upgrades
+sudo unattended-upgrades --dry-run --debug
 ```
 
-## Bakim notlari
+Komutun sonunda `Checking (veya Installing)...` gibi çıktılar görüyorsanız sistem çalışıyor demektir.
 
-- Ayda bir planli guncelleme penceresi belirle.
-- Kritik yamalar icin acil prosedur tanimla.
-- Eski paketleri periyodik temizle:
+## 6. Logları İzleme
+
+Gerçekten güncelleme yapıp yapmadığını loglardan takip edebilirsiniz:
 
 ```bash
-apt autoremove -y
+# Ana log dosyası
+cat /var/log/unattended-upgrades/unattended-upgrades.log
+
+# Son gerçekleşen işlemler
+tail -f /var/log/unattended-upgrades/unattended-upgrades.log
 ```
 
-## Dogrulama
+## 7. Servis Durumu
 
-- `/etc/apt/apt.conf.d/20auto-upgrades` dosyasi olustu mu?
-- Guncelleme zamanlayicisi aktif mi?
+Bu işlem bir "Systemd Timer" ile tetiklenir. Çalıştığını teyit edelim:
+
+```bash
+systemctl status apt-daily-upgrade.timer
+```
+
+Çıktıda `Active: active (waiting)` görmelisiniz.

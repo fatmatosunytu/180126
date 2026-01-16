@@ -36,7 +36,7 @@ Varsayılan olarak Docker, tüm imajları ve volume'leri `/var/lib/docker` altı
 Bu yüzden Docker verilerini harici **Block Volume**'e taşımalıyız.
 
 > [!IMPORTANT]
-> Önce [Oracle Block Volume](../../cloud/oracle/storage.md) rehberindeki adımları tamamlayıp diski `/mnt/blockvolume` altına mount ettiğinizden emin olun.
+> Önce [Oracle Block Volume](../cloud/oracle/storage.md) rehberindeki adımları tamamlayıp diski `/mnt/blockvolume` altına mount ettiğinizden emin olun.
 
 ### Data Root Değiştirme Adımları
 

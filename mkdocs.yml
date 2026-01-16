@@ -67,6 +67,12 @@ nav:
           - CLI & Araclar: cloud/oracle/cli.md
           - Network (VCN): cloud/oracle/network.md
           - Block Volume (Storage): cloud/oracle/storage.md
+      - Coklu Bulut & AWS:
+          - Kavramlar & Kiyaslama: cloud/aws/concepts.md
+          - AWS CLI: cloud/aws/cli.md
+          - AWS EC2: cloud/aws/ec2.md
+          - AWS Ag & Guvenlik: cloud/aws/networking.md
+          - AWS EBS (Depolama): cloud/aws/storage.md
   - Kurulum:
       - Genel: how-to/index.md
       - Temel OS: how-to/base-os.md

@@ -90,6 +90,32 @@ Ubuntu 22.04 ve sonrasında SSH, varsayılan olarak **"Socket Activation"** ile 
 > [!NOTE]
 > Bu işlem CentOS/RHEL veya Debian'da gerekmez, onlar zaten standart modda çalışır. Ama Ubuntu'da **şarttır**.
 
+??? info "Derinlemesine Bakış: SSH Socket Nedir?"
+**Socket Activation**, servisin sürekli açık kalması yerine (daemon), systemd'nin bir "kapı görevlisi" (socket) gibi beklemesidir. Kapıya biri vurunca (bağlantı gelince) asıl servisi o an uyandırır.
+
+    **Sisteminizde hangisinin aktif olduğunu anlamak için:**
+
+    1.  **Durum Kontrolü:**
+        ```bash
+        systemctl status ssh ssh.socket --no-pager
+        ```
+        *   `ssh.socket`: **active (running)** ise Socket modundasınız (Ubuntu 22.04+ varsayılanı).
+        *   `ssh.service`: **active (running)** ve socket kapalıysa Klasik moddasınız.
+
+    2.  **Hangisi Dinliyor?**
+        ```bash
+        sudo ss -lntp | grep ':2222'
+        ```
+        *   Çıktıda `systemd` görüyorsanız → Socket dinliyor.
+        *   Çıktıda `sshd` görüyorsanız → Servis dinliyor.
+
+    3.  **Yönetim İpucu:**
+        Socket modundaysanız, restart atarken `ssh` servisini değil, `ssh.socket`i restart etmeniz daha garantidir:
+        ```bash
+        sudo systemctl daemon-reload
+        sudo systemctl restart ssh.socket
+        ```
+
 ## Adım 4: Test ve Restart
 
 Hatayı restart atmadan önce yakalamalıyız.
@@ -137,3 +163,76 @@ sudo ufw reload
 ```
 
 Artık sadece 2222 açık! 🔒
+
+## Adım 7: İleri Düzey Hardening (Lynis Önerileri)
+
+Bu ayarlar sadece "puan artırmak" için değildir; sunucunuzun yeteneklerini kısıtlayarak saldırı yüzeyini daraltır.
+
+**Neden Gerekli?**
+
+1.  **TcpForwarding (Tünelleme):** Varsayılan olarak SSH, sunucunuzu bir "Proxy" gibi kullanmaya izin verir. Bir saldırgan şifrenizi ele geçirirse, sizin sunucunuz üzerinden internete çıkıp başka yerlere saldırabilir (IP'nizi kirletir). Bunu kapatıyoruz.
+2.  **X11Forwarding:** Sunucuda grafik arayüz (pencere, mouse vs.) kullanmıyorsanız bu özellik gereksiz bir güvenlik riskidir. Kapatıyoruz.
+3.  **ClientAlive:** Kullanıcı bilgisayar başından kalktıysa, SSH oturumu sonsuza kadar açık kalmasın, otomatik kapansın istiyoruz.
+
+**Uygulama:**
+
+SSH'da önemli bir kural vardır: **"İlk okunan satır geçerlidir."**
+Bu yüzden dosyanın en altına eklemek yerine, mevcut satırları bulup değiştirmek en garantili yöntemdir.
+
+1.  Dosyayı açın: `sudo nano /etc/ssh/sshd_config`
+2.  `Ctrl+W` ile aşağıdaki ayarları aratın.
+3.  Başlarında `#` varsa silin (yorum satırından çıkartın).
+4.  Değerlerini şu şekilde güncelleyin:
+
+```ssh
+# Proxy/VPN olarak kullanılmasını engelle
+AllowTcpForwarding no
+AllowAgentForwarding no
+X11Forwarding no
+
+# Boş oturumları at (5 dakika sonra)
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# Giriş denemelerini kısıtla
+MaxAuthTries 3
+MaxSessions 2
+```
+
+_(Eğer dosyada bu satırları bulamazsanız, en alta ekleyebilirsiniz.)_
+
+```ssh
+# ==============================================
+# LYNIS HARDENING (Level 2)
+# ==============================================
+
+# Tünelleme ve Yönlendirmeyi Kapat
+# (Saldırgan sunucuyu proxy gibi kullanamasın)
+AllowTcpForwarding no
+AllowAgentForwarding no
+X11Forwarding no
+
+# Boş Duran Bağlantıları Kes
+# (3 deneme x 300 saniye = Cevap vermeyen client'ı at)
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# Giriş Deneme Haklarını Kısıtla
+# (Brute-force saldırıları için ek zorluk)
+MaxAuthTries 3
+MaxSessions 2
+
+# Log Seviyesini Artır
+# (Saldırı analizi için daha fazla detay)
+LogLevel VERBOSE
+
+# TCP KeepAlive Kapat
+# (Hayalet bağlantıları önler, ClientAlive ile birlikte kullanılır)
+TCPKeepAlive no
+```
+
+Ayarları uygulayın:
+
+```bash
+sudo sshd -t && sudo systemctl reload ssh
+```

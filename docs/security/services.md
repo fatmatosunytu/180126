@@ -1,65 +1,143 @@
-# Gereksiz Servislerin Temizliği
+# Gereksiz Servislerin Temizliği (Multi-Cloud)
 
-Bulut sunucuları (VPS/Cloud) genellikle "headless" (monitörsüz) çalışır. Ancak Ubuntu imajları bazen masaüstü veya fiziksel laptoplarda kullanılan servislerle yüklü gelebilir. Bu servisleri kapatmak hem RAM kazandırır hem de saldırı yüzeyini küçültür.
+Sanal sunucular (VPS), genellikle çok amaçlı imajlardan türetilir. Bu imajlar, "her duruma uysun" diye ihtiyacınız olmayan onlarca servisle yüklü gelir.
 
-> [!NOTE]
-> Bu öneriler "Generic Cloud Server" (VPS) içindir. Fiziksel bir sunucu (Bare Metal) veya masaüstü kullanıyorsanız dikkatli olun.
+Bu rehber **Oracle Cloud, Google Cloud (GCP), Alibaba Cloud** ve **AWS** üzerindeki **Ubuntu, Debian ve CentOS** sistemleri için geçerlidir.
 
-## 1. ModemManager
+---
 
-LTE/3G modemleri yönetmek içindir. Sunucunuzda SIM kart takılı değilse (ki %99.99 değildir) kesinlikle gereksizdir.
+## 1. Analiz: Neyin Çalıştığını Gör
+
+Körlemesine servis kapatmayın. Önce neyin çalıştığını görün.
+
+=== "Debian / Ubuntu"
+`bash
+    systemctl list-units --type=service --state=running
+    `
+
+=== "CentOS / RHEL"
+`bash
+    systemctl list-units --type=service --state=running
+    `
+
+## 2. Evrensel Gereksizler (Bloatware)
+
+Hangi bulut sağlayıcısında olursanız olun, bir sunucuda bunlara ihtiyacınız yoktur.
+
+### Yazıcı ve Çevre Birimleri
+
+Sunucunun yazıcısı, tarayıcısı veya ses kartı (genelde) yoktur.
+
+- **cups:** Linux yazdırma servisi (Common Unix Printing System).
+- **bluetooth:** Bluetooth donanımı yönetimi.
+- **alsa / pulseaudio:** Ses yönetimi.
+
+=== "Temizlik Komutu"
+
+````bash # Servisleri durdur
+sudo systemctl stop cups cups-browsed bluetooth
+sudo systemctl disable cups cups-browsed bluetooth
+
+    # Paketleri tamamen sil (Ubuntu/Debian)
+    sudo apt purge -y cups* bluez* alsa-utils
+    sudo apt autoremove -y
+    ```
+
+### Masaüstü Kalıntıları
+
+Eğer "Minimal" olmayan bir imaj kullandıysanız şunlar olabilir:
+
+- **ModemManager:** USB Modem/SIM kart yönetimi (Sunucuda 4G modül yoksa gereksiz).
+- **udisks2:** Masaüstü ortamları için disk otomatik bağlama aracı.
 
 ```bash
-sudo systemctl stop ModemManager
-sudo systemctl disable ModemManager
-```
+sudo systemctl stop ModemManager udisks2
+sudo systemctl disable ModemManager udisks2
+````
 
-## 2. Disk Yönetimi (udisks2)
+---
 
-GNOME disk utility ve diğer masaüstü araçları için arka planda çalışır. Headless sunucuda gereksizdir.
+## 3. Depolama ve Ağ Servisleri
+
+### Multipath Tools (`multipathd`) Nedir?
+
+**Durum:** Oracle Cloud ve Enterprise RHEL/CentOS imajlarında sıkça görülür.
+**Ne Yapar?** Sunucuya bağlı bir diske giden birden fazla kablo/yol (path) varsa, biri koparsa diğerinden devam etmeyi sağlar.
+**Kapatmalı mıyım?** **EVET:** Eğer sunucunuz standart bir VM ise ve sadece **Boot Volume** kullanıyorsanız. Veya ek diskiniz (`/dev/sdb`) olsa bile `/dev/mapper` altında görünmüyorsa.
+
+- **HAYIR:** Kurumsal SAN/iSCSI yapısında, diski `/dev/mapper/mpatha` gibi bir isimle kullanıyorsanız.
+
+**Kontrol (Emin Değilseniz):**
 
 ```bash
-sudo systemctl stop udisks2
-sudo systemctl disable udisks2
+lsblk
+# Çıktıda diskler "sdb -> sdb1" şeklindeyse Multipath YOKTUR -> Kapatın.
+# Çıktıda "sdb -> mpatha" görüyorsanız Multipath VARDIR -> Dokunmayın.
 ```
 
-## 3. Firmware Update (fwupd)
-
-Donanım firmware güncellemelerini yönetir. Cloud ortamında firmware hypervisor tarafından yönetildiği için genellikle işlevsizdir veya gereksiz kaynak tüketir.
+**Kapatma:**
 
 ```bash
-sudo systemctl stop fwupd
-sudo systemctl disable fwupd
+sudo systemctl stop multipathd
+sudo systemctl disable multipathd
 ```
 
-## 4. RPC Bind (rpcbind)
+### RPC Bind (`rpcbind`)
 
-Eğer **NFS** (Network File System) kullanmıyorsanız (yani başka bir sunucudan klasör bağlamıyorsanız), `rpcbind` servisine ihtiyacınız yoktur. Port tarayıcıların sevdiği bir servistir.
-
-> [!WARNING] > **Oracle Cloud Agent** veya bazı cloud-init servisleri nadiren buna ihtiyaç duyabilir. Kapatmadan önce sistem loglarını kontrol edin veya test ortamında deneyin.
+**Durum:** Her yerde çıkabilir.
+**Ne Yapar?** NFS (Dosya paylaşımı) için port haritalaması yapar.
+**Kapatmalı mıyım?** Başka bir sunucudan klasör bağlamıyorsanız (`mount nfs...`) kapatın. Güvenlik riski oluşturur (DDoS tetikleyicisi olabilir).
 
 ```bash
 sudo systemctl stop rpcbind
-sudo systemctl disable rpcbind
-# Soketi de kapatmak gerekebilir:
 sudo systemctl stop rpcbind.socket
+sudo systemctl disable rpcbind
 sudo systemctl disable rpcbind.socket
 ```
 
-## 5. Bluetooth
+---
 
-Sanal sunucuda Bluetooth donanımı yoktur. Varsa kapatın:
+## 4. Dağıtıma Özel Notlar
+
+### Ubuntu / Debian
+
+- **snapd:** Canonical'ın paket yöneticisi. Bazı kullanıcılar _Snap_ paketlerini yavaş ve "bloat" bulur. Eğer `docker` veya `apt` kullanıyorsanız Snap'i tamamen silebilirsiniz.
+  - _Uyarı:_ `certbot` kuracaksanız Ubuntu bazen snap ile kurmayı önerir. Alternatifini (`pip` veya `apt`) bildiğinizden emin olun.
+- **unattended-upgrades:** **SİLMEYİN.** Güvenlik güncellemelerini yapar.
+- **fwupd:** Firmware update. Sanal sunucuda gereksizdir, silebilirsiniz.
+
+### CentOS / RHEL / Fedora
+
+- **postfix:** RHEL tabanında varsayılan yüklü gelir (Sadece local mail için). Dışarıya mail atmıyorsanız silebilirsiniz veya `inet_interfaces = localhost` yaptığınızdan emin olun.
+- **firewalld:** Eğer bizim rehberdeki gibi **UFW** kuracaksanız, `firewalld` servisini mutlaka kapatın. İkisi çakışır.
+  ```bash
+  sudo systemctl stop firewalld && sudo systemctl disable firewalld
+  ```
+- **tuned:** Performans profili aracıdır. **Silmeyin**, "virtual-guest" profilinde çalıştığından emin olun (`tuned-adm active`).
+
+---
+
+## 5. Bulut Ajanları (Cloud Agents) - DOKUNMAYIN!
+
+Bulut sağlayıcıları, sunucuyu yönetmek (şifre sıfırlama, metrik izleme, IP atama) için kendi ajanlarını yükler. Bunları silmek risklidir.
+
+- **Genel:** `cloud-init` (İlk açılış ayarları - **ASLA SİLMEYİN**)
+- **Oracle:** `oracle-cloud-agent` (Monitoring ve yönetim için, genelde kalsın).
+- **Google Cloud:** `google-guest-agent`, `google-oslogin-agent` (SSH anahtarlarını yönetir. Silerseniz panele erişemeyebilirsiniz!).
+- **Alibaba:** `aliyun-service` (Aliyun Assist). Alibaba'nın yönetim aracıdır.
+
+> [!WARNING]
+> Bu ajanları "casusluk yapıyor" diye silenler olur ancak sildiğinizde sunucu yönetim panelindeki "Reboot", "Reset Password" veya "Graphs" özellikleri çalışmayabilir. Ne yaptığınızdan %100 emin değilseniz dokunmayın.
+
+---
+
+## Özet Kontrol Listesi
+
+Temizlik sonrası son bir kontrol için şu komutu çalıştırıp "kırmızı bayrak" listedekiler var mı bakın:
 
 ```bash
-sudo systemctl stop bluetooth
-sudo systemctl disable bluetooth
+# Şüphelileri ara
+sudo systemctl list-units --type=service --state=running | grep -E "cups|blue|Modem|rpcbind|postfix|exim4|multipath"
 ```
 
-## Toplu Kontrol
-
-Hangi servisler aktif ve başarısız (failed) durumda görmek için:
-
-```bash
-systemctl list-units --type=service --state=running
-systemctl list-units --type=service --state=failed
-```
+Çıktı boşsa sunucunuz fit ve güvenli demektir. 🚀

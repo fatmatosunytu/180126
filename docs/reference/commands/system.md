@@ -19,6 +19,19 @@ sudo systemctl disable nginx
 
 # Başarısız olan servisleri listele
 systemctl --failed
+
+# Gelişmiş Status Parametreleri
+systemctl status nginx --no-pager  # Pager (less) kullanmadan çıktı ver
+systemctl status nginx -l          # Satırları kesme (Full log)
+systemctl status nginx -n 50       # Son 50 satır logu göster
+```
+
+### Servis Düzenleme (Advanced)
+
+Servis dosyasını (`/lib/systemd/system/...`) elle açmak yerine bu komutu kullanın. Bu, yapılan değişiklikleri `/etc/systemd/system/` altına güvenli bir kopya (override) olarak kaydeder.
+
+```bash
+sudo systemctl edit nginx --full
 ```
 
 ## 2. Log İnceleme (Journalctl)

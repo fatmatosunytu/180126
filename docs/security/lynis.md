@@ -1,161 +1,73 @@
-# Lynis
+# Lynis (Güvenlik Denetimi)
 
-Lynis, sunucuda hizli bir guvenlik denetimi yapip pratik iyilestirme onerileri veren hafif bir arac. Zorunlu degil; temel amac, guvenlik hijyenini hizli bir sekilde gorunur yapmak ve eksikleri takip etmek.
+Lynis, sunucuda hızlı bir güvenlik denetimi yapıp, sisteminizi 100 üzerinden puanlayan ve eksikleri raporlayan bir araçtır. Bir "Antivirüs" değildir; bir "Müfettiş"tir.
 
-## Ne zaman kullanilir?
-
-- Yeni kurulumdan sonra temel guvenlik durumunu gormek icin.
-- Periyodik saglik kontrolu yapmak icin.
-- Hardening backlog'u cikarmak icin.
-
-## Alternatif var mi?
-
-- **CIS-CAT / OpenSCAP**: Daha formal, politika tabanli denetim (kurumsal ortamlarda tercih edilebilir).
-- **osquery + kural setleri**: Surekli gorme ve sorgulama icin.
-- **Lynis**: En hizli ve hafif baslangic, rapor okumasi kolay.
-
-Kisa karsilastirma:
-
-- **CIS-CAT**: CIS benchmark uyumlulugu raporlamak isteyen ekipler icin.
-- **OpenSCAP**: Regulator/uyumluluk odakli ortamlarda (STIG, CIS profilleri).
-- **Lynis**: Hizli, hafif, tek sunucu veya kucuk filolar icin pratik.
-
-## OS farkliliklari (Ubuntu/Debian vs CentOS/RHEL)
-
-- Lynis ayni sekilde calisir; fark paket yoneticisidir.
-- Log/rapor dosyalari varsayilan olarak yine `/var/log/` altinda olur.
-
-## Varsayimlar ve gereksinimler
-
-- `sudo` yetkisi.
-- Uretimde degisiklik yapmadan once staging/test ortami.
-
-## Kurulum
-
-Ubuntu/Debian:
+## 1. Kurulum
 
 ```bash
-apt update
-apt install -y lynis
+sudo apt update
+sudo apt install -y lynis
 ```
 
-CentOS/RHEL:
+## 2. Tarama Başlatma
+
+Taramayı başlatın:
 
 ```bash
-yum install -y lynis
-# veya
-dnf install -y lynis
+sudo lynis audit system
 ```
 
-## Tarama
+_(Enter'a basarak ilerleyebilirsiniz. Hızlı geçmek için `-Q` parametresini kullanabilirsiniz: `sudo lynis audit system -Q`)_
 
-Raporun nereye kaydedileceğini kesinleştirmek için `--report-file` parametresini kullanmak en iyisidir:
+## 3. Yaygın Uyarılar ve Çözümleri
+
+Tarama sonucunda muhtemelen şunları göreceksiniz:
+
+### ⚠️ Malware scanner not found
+
+**Anlamı:** Lynis, sistemde virüs veya rootkit tarayıcısı (ClamAV, Rkhunter) bulamadı.
+**Çözüm:** Bu bir "hata" değil, eksikliktir. Linux sunucularda antivirüs şart değildir ama "Rootkit Hunter" kurmak iyi bir pratiktir.
+**Kurulum (Opsiyonel):**
 
 ```bash
-sudo lynis audit system --report-file /var/log/lynis-report.dat
+sudo apt install -y rkhunter
+sudo rkhunter --propupd # Veritabanını güncelle
 ```
 
-Eğer sadece rapor üretilsin, ekrana bir şey basmasın istiyorsanız:
+### ⚠️ Security repository not found (PKGS-7388)
+
+**Anlamı:** Lynis, Ubuntu 24.04'ün yeni kaynak formatını (`.sources`) bazen tanıyamaz ve güvenlik deposu yok sanır.
+**Çözüm:** Bu bir **False Positive** (Yanlış Alarm) durumudur. Eğer `apt-cache policy` çıktısında `-security` görüyorsanız bu uyarıyı görmezden gelebilirsiniz.
+
+### ⚠️ Old version / Update available
+
+**Anlamı:** Lynis'in kendi sürümü eski olabilir (`apt` depolarındaki sürüm bazen resmi siteden geriden gelir).
+**Çözüm:** Güvenlik açığı değildir, sadece tool'un güncel olmadığını söyler. Önemli değildir.
+
+### ⚠️ Firewall not active
+
+**Anlamı:** UFW veya Iptables aktif değil.
+**Çözüm:** Firewall bölümündeki ayarları yapın. (Docker kullanıyorsanız bu uyarı bazen yanıltıcı olabilir, `nft list ruleset` ile kontrol edin).
+
+### ⚠️ Banner / Issue file
+
+**Anlamı:** SSH ile bağlanırken ekranda "Ubuntu 22.04" gibi versiyon bilgisi yazıyor. Saldırganlara bilgi vermemek için bunu gizlemenizi önerir.
+**Çözüm:** `/etc/issue.net` dosyasının içeriğini temizleyebilirsiniz.
+
+## 4. Raporu Okuma
+
+Tarama bitince size bir **Hardening Index** (Örn: 65/100) verir.
+
+- **60 altı:** Güvenlik zayıf, acil önlem lazım.
+- **70-80 arası:** Gayet iyi, standart bir sunucu için yeterli.
+- **90 üstü:** Çok sıkı (Hardened), bazen kullanımı zorlaştırabilir.
+
+Detaylı rapor `/var/log/lynis.log` dosyasındadır.
+
+## 5. Otomatik Tarama (Cron)
+
+Ayda bir sistemin sağlık durumunu kontrol etmek için:
 
 ```bash
-sudo lynis audit system --quiet --report-file /var/log/lynis-report.dat
+echo "0 3 1 * * root /usr/bin/lynis audit system -Q" | sudo tee /etc/cron.d/lynis-audit
 ```
-
-> [!NOTE] > **Uyarılar Hakkında:**
->
-> - `Test CRYP-7902 had a long execution`: Genelde önemsizdir, şifreleme testleri yavaş çalışabilir.
-> - `pgrep: pattern ... too long`: Lynis'in bazı süreçleri kontrol ederken kullandığı komutun yan etkisidir, genellikle yoksayılabilir.
-> - `--quiet` modu sonuç özeti (footer) basmaz, bu yüzden raporun nerede olduğunu yazmaz. O yüzden `--report-file` ile yolu siz belirleyin.
-
-## Yaygin parametreler (istege bagli)
-
-```bash
-sudo lynis audit system --verbose
-sudo lynis audit system --no-colors
-sudo lynis audit system --pentest
-```
-
-- `--quiet`: Sessiz cikti (Rapor konumu ekranda yazmaz!).
-- `--verbose`: Daha fazla detay.
-- `--no-colors`: Renkli cikti kapatir.
-- `--pentest`: Pentest odakli ipuclari.
-- `--forensics`: Canli veya mount edilmis sistemde forensics modu.
-
-## Raporlama ve bulgu takibi
-
-!!! tip "Hizli ozet (tek komut)"
-`bash
-    sudo awk -F= '
-      $1=="hardening_index" {hi=$2}
-      $1=="score" {score=$2}
-      $1 ~ /^warning\[/ {w++}
-      $1 ~ /^suggestion\[/ {s++}
-      END {printf "hardening_index=%s\nscore=%s\nwarnings=%d\nsuggestions=%d\n", hi, score, w, s}
-    ' /var/log/lynis-report.dat
-    ` - `hardening_index`: Sertlestirme seviyesi (0-100). - `score`: Genel puan (surume gore bos gelebilir). - `warnings`: Kritik/uyari sayisi. - `suggestions`: Iyilestirme onerisi sayisi.
-
-- Log ve rapor dosyalari:
-  ```bash
-  sudo tail -n 200 /var/log/lynis.log
-  sudo tail -n 200 /var/log/lynis-report.dat
-  ```
-- Rapor dosyasindan ozet anahtarlar:
-  ```bash
-  sudo grep -E "hardening_index|score" /var/log/lynis-report.dat
-  ```
-- Uyari ve oneriler:
-  ```bash
-  sudo grep -E "warning\\[|suggestion\\[" /var/log/lynis-report.dat
-  ```
-- Tam tarama ciktisi ekranda listelenir; ozet bolumu en altta gorunur.
-
-!!! note
-Lynis surumlerine gore komutlar degisebilir. `lynis report show` gibi komutlar her surumde yoktur. Suphe durumunda `lynis show` ve `man lynis` ile desteklenen komutlari kontrol et, rapor icin `/var/log/lynis-report.dat` dosyasini kullan.
-
-## Rapor dosyasi bulunamadiysa
-
-Lynis varsayilan olarak raporu `/var/log/lynis-report.dat` dosyasina yazar. Dosya bulunamiyorsa, tarama `sudo` ile calismamis veya rapor baska dizine yazilmis olabilir.
-
-- Dosya adini bulmak icin `find` kullanmak daha dogru; `grep` icerik arar.
-  ```bash
-  sudo find / -name "lynis-report.dat" 2>/dev/null
-  ```
-- `locate` kuruluysa daha hizlidir:
-  ```bash
-  sudo updatedb
-  locate lynis-report.dat
-  ```
-  - Ubuntu/Debian: `sudo apt install -y plocate` (veya `mlocate`)
-  - CentOS/RHEL: `sudo yum install -y mlocate`
-- Son taramayi root olarak calistir:
-  ```bash
-  sudo lynis audit system
-  ```
-- Rapor kullanici ev dizinindeyse:
-  ```bash
-  sudo grep -E "hardening_index|score" /home/ubuntu/lynis-report.dat
-  ```
-
-!!! warning
-`--no-log` kullanirsan rapor dosyasi uretilmez. Rapor konumu, `sudo` ile calistirma ve Lynis surumune gore degisebilir.
-
-## Oneriler ve uygulama
-
-- Onerileri etki analizinden sonra planla (risk, geri donus, sahiplik).
-- Kritik degisiklikleri kontrollu pencerede uygula.
-
-!!! warning
-Guvenlik sertlestirme onerileri servis kesintisine veya SSH erisim kaybina neden olabilir. Degisiklikleri once staging ortaminda dene, erisim yedegi (out-of-band/console) planla.
-
-## Periyodik tarama (opsiyonel)
-
-- Aylik tarama icin basit bir cron:
-  ```bash
-  sudo sh -c 'echo "0 2 1 * * root /usr/bin/lynis audit system --quiet" > /etc/cron.d/lynis-audit'
-  ```
-
-## Dogrulama
-
-- Kritik bulgular listelendi mi?
-- Uygulanan oneriler dokumante edildi mi?
-- Onceki raporla karsilastirma yapildi mi?
