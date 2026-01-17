@@ -276,3 +276,33 @@ body {
   filter: brightness(110%);
   box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
 }
+
+/* Footer Navigation Styling */
+.md-footer {
+  margin-top: 2rem;
+}
+
+.md-footer__inner {
+  padding: 0.5rem;
+}
+
+.md-footer__link {
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+
+.md-footer__link:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-color);
+  background: var(--card-hover-bg);
+  box-shadow: 0 10px 20px -10px rgba(0,0,0,0.1);
+}
+
+.md-footer__title {
+  font-weight: 700;
+  color: var(--text-primary);
+}
