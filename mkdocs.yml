@@ -55,12 +55,6 @@ markdown_extensions:
 
 nav:
   - Ana Sayfa: index.md
-  - Mimari:
-      - Genel: architecture/index.md
-      - Genel Bakis: architecture/overview.md
-      - Ag Tasarimi: architecture/network.md
-      - Docker Gateway Mimarisi: architecture/docker-gateway.md
-      - Operasyon: architecture/operations.md
   - Bulut Altyapisi:
       - Oracle Cloud:
           - Genel Bakis: cloud/oracle/overview.md
@@ -73,22 +67,44 @@ nav:
           - AWS EC2: cloud/aws/ec2.md
           - AWS Ag & Guvenlik: cloud/aws/networking.md
           - AWS EBS (Depolama): cloud/aws/storage.md
-  - Kurulum:
-      - Genel: how-to/index.md
-      - Temel OS: how-to/base-os.md
-      - Swap Bellek: how-to/swap.md
-      - Docker & Storage: how-to/docker.md
-      - Nginx: how-to/nginx.md
-      - Reverse Proxy: how-to/reverse-proxy.md
-      - TLS: how-to/tls.md
-      - Systemd Servis: how-to/systemd-service.md
-      - Logrotate: how-to/logrotate.md
-      - Monitoring: how-to/monitoring.md
-      - Monitoring Stack: how-to/monitoring-stack.md
-      - Yedekleme: how-to/backups.md
-      - Paket Yonetimi: how-to/package-management.md
-      - Kullanici Yonetimi: how-to/user-management.md
-      - Ag/Port Kontrolleri: how-to/port-checks.md
+  - Sistem Yonetimi (Ops):
+      - Kurulum & Konfigurasyon:
+          - Genel: how-to/index.md
+          - Temel OS: how-to/base-os.md
+          - Swap Bellek: how-to/swap.md
+          - Docker & Storage: how-to/docker.md
+          - Nginx: how-to/nginx.md
+          - Reverse Proxy: how-to/reverse-proxy.md
+          - TLS: how-to/tls.md
+          - Systemd Servis: how-to/systemd-service.md
+          - Logrotate: how-to/logrotate.md
+          - Monitoring: how-to/monitoring.md
+          - Monitoring Stack: how-to/monitoring-stack.md
+          - Yedekleme: how-to/backups.md
+          - Paket Yonetimi: how-to/package-management.md
+          - Kullanici Yonetimi: how-to/user-management.md
+          - Ag/Port Kontrolleri: how-to/port-checks.md
+      - Olay Mudahale (Runbooks):
+          - Genel: runbooks/index.md
+          - Olay Yonetimi: runbooks/incident-response.md
+          - Servis Kesintisi: runbooks/service-down.md
+          - Deploy Geri Alma: runbooks/deploy-rollback.md
+          - Disk Dolu: runbooks/disk-full.md
+          - Inode Dolu: runbooks/inode-full.md
+          - Disk IO: runbooks/disk-io.md
+          - OOM Kill / Memory Leak: runbooks/oom-kill.md
+          - CPU Spike: runbooks/cpu-spike.md
+          - Veritabani Down: runbooks/db-down.md
+          - TLS Yenileme: runbooks/tls-renewal.md
+          - Sertifika Suresi Doldu: runbooks/cert-expired.md
+          - DNS Sorunlari: runbooks/dns-issues.md
+          - Network Latency: runbooks/network-latency.md
+          - LB Healthcheck: runbooks/lb-healthcheck.md
+          - DDoS / Rate Limit: runbooks/ddos-rate-limit.md
+          - Replication Lag: runbooks/replication-lag.md
+          - Backup Restore Fail: runbooks/backup-restore-fail.md
+          - Config Deploy Hatasi: runbooks/config-deploy-fail.md
+          - SSH Lockout: runbooks/ssh-lockout.md
   - Guvenlik:
       - Genel: security/index.md
       - SSH Hardening: security/ssh.md
@@ -96,42 +112,34 @@ nav:
       - Fail2ban: security/fail2ban.md
       - SSHGuard: security/sshguard.md
       - CrowdSec: security/crowdsec.md
-
+      - Google Auth (2FA): security/2fa.md
       - Otomatik Guncellemeler: security/updates.md
       - Kernel Hardening (Sysctl): security/sysctl.md
       - Kernel Sozlugu (Detay): security/sysctl-glossary.md
+      - Derleyici Kisitlama: security/compilers.md
+      - Kaynak Kisitlama (CPU/RAM): security/resource-limits.md
+      - Docker Guvenligi (Hardening): security/docker.md
+      - Docker Gateway Mimarisi: security/docker-gateway.md
+      - Izleme ve Anomali (Alerts): security/monitoring.md
+      - Dosya Butunlugu (AIDE): security/fim.md
+      - Tmp Guvenligi (Noexec): security/tmp-hardening.md
+      - Secret Yonetimi (Sifreler): security/secrets.md
       - Servis Temizligi: security/services.md
       - Servis Sozlugu: security/service-glossary.md
       - Malware & Rootkit: security/malware.md
       - Hacker Tuzaklama (Tarpit): security/tarpit.md
       - Lynis: security/lynis.md
+  - Uygulama Ornekleri (Recipes):
+      - .NET Core Hardening: recipes/dotnet.md
+      - React + Nginx: recipes/react.md
+      - PostgreSQL Tuning: recipes/postgres.md
+      - Nginx Proxy Security: recipes/nginx.md
   - Referans:
       - Linux Komutlari:
           - Dosya Islemleri: reference/commands/file.md
           - Disk & Kaynak: reference/commands/disk.md
           - Ag & Port: reference/commands/network.md
           - Sistem & Servis: reference/commands/system.md
-  - Runbooks:
-      - Genel: runbooks/index.md
-      - Olay Yonetimi: runbooks/incident-response.md
-      - Servis Kesintisi: runbooks/service-down.md
-      - Deploy Geri Alma: runbooks/deploy-rollback.md
-      - Disk Dolu: runbooks/disk-full.md
-      - Inode Dolu: runbooks/inode-full.md
-      - Disk IO: runbooks/disk-io.md
-      - OOM Kill / Memory Leak: runbooks/oom-kill.md
-      - CPU Spike: runbooks/cpu-spike.md
-      - Veritabani Down: runbooks/db-down.md
-      - TLS Yenileme: runbooks/tls-renewal.md
-      - Sertifika Suresi Doldu: runbooks/cert-expired.md
-      - DNS Sorunlari: runbooks/dns-issues.md
-      - Network Latency: runbooks/network-latency.md
-      - LB Healthcheck: runbooks/lb-healthcheck.md
-      - DDoS / Rate Limit: runbooks/ddos-rate-limit.md
-      - Replication Lag: runbooks/replication-lag.md
-      - Backup Restore Fail: runbooks/backup-restore-fail.md
-      - Config Deploy Hatasi: runbooks/config-deploy-fail.md
-      - SSH Lockout: runbooks/ssh-lockout.md
   - Kontrol Listeleri:
       - Ilk Kurulum: checklists/server-first-setup.md
       - Uretime Hazirlik: checklists/prod-ready.md

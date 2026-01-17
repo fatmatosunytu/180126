@@ -20,7 +20,7 @@ Docker, kendi kurallarını `iptables` zincirinin en başına yazar. Bunu engell
 **Bu yüzden `ufw-docker` aracını kullanın.** Bu araç, o karmaşık `iptables` kurallarını sizin yerinize güvenli şekilde yönetir.
 
 > [!TIP] > **Mimari Çözüm:** Portları hiç açmamak en iyisidir!  
-> Docker'da güvenli "Gateway Modeli" kurmak için [Docker Gateway Mimarisi](../architecture/docker-gateway.md) rehberini mutlaka okuyun.
+> Docker'da güvenli "Gateway Modeli" kurmak için [Docker Gateway Mimarisi](docker-gateway.md) rehberini mutlaka okuyun.
 
 ### Önerilen Çözüm: ufw-docker
 

@@ -1,44 +1,65 @@
-# Sunucu Güvenliği (Hardening)
+# Sunucu Güvenliği (Hardening) 🛡️
 
-Bu bölüm, sunucunuzu "Production Ready" hale getirmek için uygulamanız gereken **Derinlemesine Savunma (Defense in Depth)** stratejisini anlatır.
+Tebrikler! Bu rehberdeki adımları tamamladıysanız, sunucunuz artık sıradan bir Linux kutusu değil, **Katmanlı Savunma (Defense in Depth)** ile korunan bir kaledir.
 
-Güvenlik tek bir ayar değildir; saldırganı her adımda yavaşlatan bir **katmanlar bütünüdür**.
+Aşağıdaki liste, uyguladığımız tüm güvenlik katmanlarının özetidir.
 
-## Güvenlik Mimarisi
+## 🧱 15 Katmanlı Güvenlik Mimarisi
 
-Aşağıdaki tablo, bu rehberde uyguladığımız güvenlik katmanlarını özetler:
+| #      | Katman            | Rehber                                            | Amaç                                                              |
+| :----- | :---------------- | :------------------------------------------------ | :---------------------------------------------------------------- |
+| **1**  | **Temel Hijyen**  | [Servis Temizliği](services.md)                   | Gereksiz servisleri sil, saldırı yüzeyini küçült.                 |
+| **2**  | **Süreklilik**    | [Oto. Güncellemeler](updates.md)                  | Yazılımları (ve Kernel'i) güvenlik açıklarına karşı yamala.       |
+| **3**  | **Çekirdek**      | [Kernel (Sysctl)](sysctl.md)                      | Network stack (IPv6, ICMP, TCP) saldırılarını engelle.            |
+| **4**  | **Erişim**        | [SSH Hardening](ssh.md)                           | Portu değiştir, Root girişini kapat, Anahtar kullan.              |
+| **5**  | **Kimlik**        | [SSH 2FA](2fa.md)                                 | Anahtar çalınsa bile telefon onayı iste (Google Auth).            |
+| **6**  | **Duvar**         | [Firewall (UFW)](firewall.md)                     | Sadece gereken portları aç, **çıkış trafiğini (egress)** kısıtla. |
+| **7**  | **Aktif Koruma**  | [CrowdSec](crowdsec.md) / [Fail2ban](fail2ban.md) | Brute-force deneyenleri otomatik banla.                           |
+| **8**  | **Dosya Sistemi** | [Tmp Hardening](tmp-hardening.md)                 | `/tmp` klasöründe script çalıştırılmasını (`noexec`) engelle.     |
+| **9**  | **Bütünlük**      | [FIM (AIDE)](fim.md)                              | "Biri sistem dosyalarını değiştirdi mi?" kontrolü yap.            |
+| **10** | **Kısıtlama**     | [Derleyici Kısıtlama](compilers.md)               | Sunucuda `gcc`, `make` gibi derleyicileri yasakla.                |
+| **11** | **Kaynak**        | [Resource Limits](resource-limits.md)             | CPU/RAM limiti koy (Crypto Miner'ları boğ).                       |
+| **12** | **Sırlar**        | [Secret Yönetimi](secrets.md)                     | Şifreleri koda gömme; `.env`, Vault veya Docker Secrets kullan.   |
+| **13** | **Konteyner**     | [Docker Güvenliği](docker.md)                     | Non-root, Read-only FS, UserNS ile konteynerleri izole et.        |
+| **14** | **Gözetleme**     | [Monitoring](monitoring.md)                       | CPU, Disk, Ağ anomalileri için alarm kur.                         |
+| **15** | **Malware**       | [Antivirüs](malware.md)                           | ClamAV ve Rkhunter ile zararlı taraması yap.                      |
 
-| Katman                     | Rehber                                            | Amaç                                                               |
-| :------------------------- | :------------------------------------------------ | :----------------------------------------------------------------- |
-| **1. Ağ & Firewall**       | [Firewall (UFW)](firewall.md)                     | Kapıları kilitlemek. Giriş/Çıkış trafiğini denetlemek.             |
-| **2. Erişim**              | [SSH Hardening](ssh.md)                           | Anahtarı saklamak. Port değiştirmek, şifreyi kapatmak.             |
-| **3. Saldırı Engelleme**   | [CrowdSec](crowdsec.md) / [Fail2ban](fail2ban.md) | Bekçi dikmek. Zorlayanları (brute-force) otomatik banlamak.        |
-| **4. Sistem Sıkılaştırma** | [Kernel (Sysctl)](sysctl.md)                      | Çekirdeği sertleştirmek. Network stack saldırılarını önlemek.      |
-| **5. Temizlik**            | [Servis Yönetimi](services.md)                    | Fazlalıkları atmak. Gereksiz servisleri (ModemManager vb.) silmek. |
-| **6. Süreklilik**          | [Oto. Güncellemeler](updates.md)                  | Aşılanmak. Güvenlik yamalarını beklemeden almak.                   |
-| **7. Aktif Savunma**       | [Hacker Tuzaklama](tarpit.md)                     | **(Opsiyonel)** Tuzak kurmak. Saldırganı oyalamak (Tarpit).        |
-| **8. Denetim**             | [Lynis Audit](lynis.md)                           | Check-up. Eksikleri raporlamak.                                    |
+---
+
+## 🚀 Uygulama Sırası (Roadmap)
+
+Sıfırdan kuruluma başladıysanız bu sırayı takip edin:
+
+### Aşama 1: Temel (İlk Kurulum)
+
+1.  [Servisleri Temizle](services.md)
+2.  [Güncellemeleri Aç](updates.md)
+3.  [SSH Ayarla](ssh.md)
+4.  [Firewall Aç](firewall.md)
+
+### Aşama 2: Sıkılaştırma (Hardening)
+
+5.  [Kernel Ayarları](sysctl.md)
+6.  [Fail2ban/Crowdsec Kur](crowdsec.md)
+7.  [/tmp Hardening](tmp-hardening.md)
+8.  [Derleyicileri Kısıtla](compilers.md)
+
+### Aşama 3: İleri Seviye (Paranoya Modu)
+
+9.  [SSH 2FA Ekle](2fa.md)
+10. [Docker Hardening Uygula](docker.md)
+11. [Monitoring Scriptlerini Kur](monitoring.md)
+12. [Her Şeyi Tara (Lynis)](lynis.md)
+
+---
 
 ## Hangisini Seçmeliyim: CrowdSec mi Fail2ban mi?
 
-İki aracı **AYNI ANDA KULLANMAYIN**. Bu, işlemciyi yorar ve firewall kurallarının çakışmasına neden olur.
+| Kriter        | [Fail2ban](fail2ban.md) 🐍           | [CrowdSec](crowdsec.md) 🐹                                   |
+| :------------ | :----------------------------------- | :----------------------------------------------------------- |
+| **Teknoloji** | Python (Eski, Güvenilir)             | Go (Modern, Bulut Tabanlı)                                   |
+| **Koruma**    | **Reaktif:** Size saldırırsa banlar. | **Proaktif:** Dünyada birine saldıranı size gelmeden banlar. |
+| **Öneri**     | 512MB RAM altı sunucular için.       | Modern, 1GB+ RAM sunucular için (**Önerilen**).              |
 
-| Kriter           | [Fail2ban](fail2ban.md) 🐍                | [CrowdSec](crowdsec.md) 🐹                                |
-| :--------------- | :---------------------------------------- | :-------------------------------------------------------- |
-| **Teknoloji**    | Python (Daha fazla RAM tüketir)           | Go (Derlenmiştir, çok hızlıdır)                           |
-| **Güvenilirlik** | Çok olgun, yılların standardı.            | Modern, yeni nesil.                                       |
-| **Koruma Tipi**  | **Reaktif:** Biri size saldırırsa banlar. | **Proaktif:** Başkasına saldıranı size gelmeden banlar.   |
-| **Kurulum**      | Çok basit, config dosyası ile yönetilir.  | Bir tık daha karmaşık, "Hub" ve "Bouncer" mantığı vardır. |
-
-> [!TIP] > **Önerimiz:** Modern bir sunucu kuruyorsanız ve 512MB RAM gibi çok dar bir kaynağınız yoksa **CrowdSec** kullanın. Daha hafif bir şey arıyorsanız **Fail2ban** (veya daha da hafifi [SSHGuard](sshguard.md)) kullanın.
-
-## Uygulama Sırası
-
-Sıfırdan bir sunucu kuruyorsanız şu sırayı takip edin:
-
-1.  **Güncelle:** [Otomatik Güncellemeler](updates.md) ile sistemi kendi kendini yamalayan hale getirin.
-2.  **Temizle:** [Servis Temizliği](services.md) ve [Kernel Hardening](sysctl.md) ile zemini sağlamlaştırın.
-3.  **Kilitle:** [SSH Güvenliği](ssh.md) ve [Firewall (UFW)](firewall.md) ile kapıları kapatın (Sıraya dikkat!).
-4.  **Koru:** [CrowdSec](crowdsec.md) (Modern) veya [Fail2ban](fail2ban.md) (Klasik) ile aktif korumayı başlatın.
-5.  **Eğlen:** İsterseniz [Hacker Tuzaklama](tarpit.md) ile port 22'ye tuzak kurun.
-6.  **Kontrol Et:** En son [Lynis](lynis.md) ile tarama yapıp puanınızı görün.
+> [!TIP]
+> Güvenlik bir varış noktası değil, yolculuktur. Haftalık [Lynis](lynis.md) taramalarınızı aksatmayın!

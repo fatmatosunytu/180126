@@ -1,71 +1,54 @@
 # Sunucu Kurulum El Kitabı
 
-<section class="hero">
-  <div class="hero__title">Production-Ready Sunucu Mimarisi: <br>Sıfırdan Canlıya.</div>
-  <div class="hero__subtitle">
-    Bu rehber, rastgele blog yazılarının birleşimi değildir. 
-    <strong>Güvenlik, Performans ve Sürdürülebilirlik</strong> odaklı, 
-    savaşta test edilmiş (battle-tested) bir kurulum standardıdır.
-  </div>
-  <div class="hero__meta">
-    <span class="hero__pill">Ubuntu/Debian LTS</span>
-    <span class="hero__pill">Security-First</span>
-    <span class="hero__pill">No-Nonsense</span>
-  </div>
-</section>
+![Server Architecture](https://img.shields.io/badge/Ubuntu-24.04%20LTS-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Hardened-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Security](https://img.shields.io/badge/Security-First-green?style=for-the-badge&logo=shield&logoColor=white)
 
-<section class="highlight-banner">
-  <strong>🔥 30 Saniyede Özet:</strong> Modern bir Linux sunucusu sadece "çalışan" değil, "kendini savunan" ve "ne yaptığını anlatan" bir yapıda olmalıdır.
-</section>
+---
 
-## Hızlı Başlangıç (Örnek)
+## Production-Ready Sunucu Mimarisi: Sıfırdan Canlıya. 🚀
 
-Bu rehberdeki standartları uyguladığınızda, sunucu kurulumunuz şu kadar net ve tekrarlanabilir hale gelir:
+Bu rehber, rastgele blog yazılarının birleşimi değildir. **Güvenlik, Performans ve Sürdürülebilirlik** odaklı, savaşta test edilmiş (battle-tested) bir kurulum standardıdır.
 
-```bash
-# Sunucuyu "Production" seviyesine getiren standart prosedür
-./init-server.sh --hostname "web-01" --user "deploy" --secure
+> **🔥 30 Saniyede Özet:** Modern bir Linux sunucusu sadece "çalışan" değil, "kendini savunan" ve "ne yaptığını anlatan" bir yapıda olmalıdır.
 
-# Çıktı:
-# [OK] SSH Hardening (Port 2222, Key-only)
-# [OK] Firewall (UFW) Configured (Allow: 80, 443, 2222)
-# [OK] Fail2Ban & CrowdSec Active
-# [OK] Auto-Updates Enabled
-# [OK] Monitoring Agent Installed
-# -> Sunucu kullanıma hazır.
-```
+---
 
-## Manifesto: Neden Bu Rehber?
+## Neden Bu Rehber? 🏛️
 
-İnternet üzerindeki "Nginx nasıl kurulur?" makalelerinin %90'ı eksik veya güvensizdir. Bu el kitabı şu prensiplere dayanır:
+Aşağıdaki üç prensip, bu el kitabının temelini oluşturur:
 
-1.  **Varsayılan Olarak Güvenli (Secure by Default):** "Firewall'u kapatıp deneyelim" yok. Güvenlik bir eklenti değil, temeldir.
-2.  **Gereksiz Yük Yok (Zero Bloat):** Sadece işe yarayan, kanıtlanmış araçlar. Grafik arayüzler yok, karmaşık dashboardlar yok.
-3.  **Dokümante Edilmiş Kararlar:** "Bunu neden böyle yaptık?" sorusunun cevabı her zaman bellidir.
+| 🛡️ **Güvenlik (Security)**                                                                             | ⚡ **Performans (Performance)**                                                                               | 🧘 **Sadelik (Simplicity)**                                                                        |
+| :----------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------- |
+| "Firewall'u kapatıp deneyelim" yok. **15 Katmanlı Savunma** stratejisi ile her adımı güvenli atıyoruz. | Varsayılan ayarlar yetersizdir. Kernel tuning, Nginx hardening ve minimal Docker imajları ile maksimum verim. | Grafik arayüzler ve gereksiz araçlar yok (**Zero Bloat**). Sadece işini yapan, temiz CLI araçları. |
 
-## Yolculuk Haritası
+---
 
-Sisteminizi kurarken izlemeniz gereken tavsiye edilen yol:
+## Hızlı Erişim (Portal) 🗂️
 
-<section class="cards">
-  <a href="architecture/" class="card">
-    <h3>1. Temel & Mimari</h3>
-    <p>Yanlış temelin dönüşü olmaz. Disk yapılandırması, ağ topolojisi ve işletim sistemi seçimi.</p>
-  </a>
-  <a href="how-to/" class="card">
-    <h3>2. Kurulum & Hardening</h3>
-    <p>Sunucuyu dış dünyaya kapat, sadece gerekli kapıları aç. SSH, Firewall ve Fail2ban.</p>
-  </a>
-  <a href="how-to/nginx/" class="card">
-    <h3>3. Servis & Yayın</h3>
-    <p>Uygulamanı dünyaya aç. Nginx, Reverse Proxy, TLS ve modern web standartları.</p>
-  </a>
-  <a href="runbooks/" class="card">
-    <h3>4. Day 2 Operasyon</h3>
-    <p>Kurmak kolaydır, peki ya yaşatmak? Loglama, İzleme, Backup ve Acil Durum (Runbook) planları.</p>
-  </a>
-</section>
+İhtiyacınız olan bölüme doğrudan gidin:
 
-## Katkıda Bulunun
+| 🚀 **Başlangıç**                                                                                                                                                                                | 🔒 **Güvenlik Merkezi**                                                                                                                                                                     |
+| :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| - [Temel OS Kurulumu](how-to/base-os.md)<br>- [Kullanıcı Yönetimi](how-to/user-management.md)<br>- [Swap & Disk](how-to/swap.md)<br>- [İlk Kurulum Checklist](checklists/server-first-setup.md) | - [**15 Katmanlı Güvenlik Mimarisi**](security/index.md) ⭐<br>- [SSH Hardening](security/ssh.md)<br>- [Firewall (UFW)](security/firewall.md)<br>- [Malware & Rootkit](security/malware.md) |
 
-Bu yaşayan bir dokümandır. Hatalı gördüğünüz veya geliştirmek istediğiniz bir nokta varsa, lütfen Pull Request gönderin.
+| 🥘 **Uygulama Reçeteleri**                                                                                                                                                       | ☁️ **Cloud & Operasyon**                                                                                                                                                                          |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| - [.NET Core Hardening](recipes/dotnet.md) 🔷<br>- [React + Nginx](recipes/react.md) ⚛️<br>- [PostgreSQL Tuning](recipes/postgres.md) 🐘<br>- [Nginx Proxy](recipes/nginx.md) 🌐 | - [Oracle Cloud Kurulumu](cloud/oracle/overview.md)<br>- [AWS Altyapısı](cloud/aws/concepts.md)<br>- [Yedekleme Stratejisi](how-to/backups.md)<br>- [Acil Durum (Runbooks)](runbooks/index.md) 🚨 |
+
+---
+
+## Öne Çıkanlar ⭐
+
+!!! tip "Docker Kullananlar Dikkat!"
+Sıradan bir `docker-compose.yml` dosyası sunucunuzu riske atabilir.
+**[Master Docker Security Guide](security/docker.md)** rehberini okumadan production'a çıkmayın!
+
+!!! warning "Güvenlik Bir Eklenti Değildir"
+Sunucunuzu kurduktan sonra **[Lynis Audit](security/lynis.md)** ile taratıp puanınızı görmeyi unutmayın. Hedef: **80+**
+
+---
+
+## Katkıda Bulunun 🤝
+
+Bu yaşayan bir dokümandır. Hatalı gördüğünüz veya geliştirmek istediğiniz bir nokta varsa, lütfen Pull Request gönderin veya Issue açın.
