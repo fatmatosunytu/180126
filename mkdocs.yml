@@ -144,13 +144,19 @@ nav:
 
   - Kontrol Listeleri:
       - Ilk Kurulum: checklists/server-first-setup.md
-      - Uretime Hazirlik: checklists/prod-ready.md
+      - Docker App Launch: checklists/app-launch.md
+      - Go/No-Go Decision: checklists/prod-ready.md
   - Scriptler:
       - Genel: scripts/index.md
       - Otomasyon: scripts/automation.md
       - Standartlar: scripts/conventions.md
       - Calistirma: scripts/execution.md
       - Guvenlik: scripts/safety.md
+      - Kutuphane (Ready-to-Use):
+          - Server Bootstrap (Init): scripts/library/bootstrap.md
+          - Haftalik Bakim (Cleaner): scripts/library/maintenance.md
+          - Veritabani Yedekleme: scripts/library/backup.md
+          - Guvenlik Denetimi (Audit): scripts/library/audit.md
   - Troubleshooting:
       - Metodoloji (USE/RED): troubleshooting/index.md
       - Hizli Teshis (Cheat Sheet): troubleshooting/cheat-sheet.md

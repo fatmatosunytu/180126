@@ -1,47 +1,68 @@
-# İlk 15 Dakika: Sunucu Hazırlık Kontrol Listesi
+# Server Verification Protocol (Day 0) 🛡️
 
-Yeni bir sunucu (VPS/Bare Metal) teslim aldığınızda, üzerine herhangi bir uygulama kurmadan önce bu listeyi tamamlayın. Bu adımlar, sunucunun internete açık olduğu ilk kritik anlarda güvenliği sağlar.
+Bir sunucuyu teslim aldığınızda "yaptım oldu" demek yetmez. **Doğrulamak (Verify)** zorundasınız.
 
-> [!IMPORTANT]
-> Bu adımlar `root` yetkisi ile değil, `sudo` yetkisine sahip bir kullanıcı ile yapılmalıdır.
+## 1. Access & Identity
 
-## 1. Erişim ve Kimlik
+| Aksiyon       | Komut                                           | Doğrulama (Verify)                                                          |
+| :------------ | :---------------------------------------------- | :-------------------------------------------------------------------------- |
+| **Update**    | `apt update && apt upgrade -y`                  | `uptime` (Load artışı yok)                                                  |
+| **Hostname**  | `hostnamectl set-hostname <name>`               | `hostname` komutu yeni ismi dönmeli.                                        |
+| **Sudo User** | `adduser deployer && usermod -aG sudo deployer` | `getent group sudo` çıktısında `deployer` görünmeli.                        |
+| **SSH Key**   | (Local) `ssh-copy-id deployer@<IP>`             | `ssh -o PreferredAuthentications=publickey deployer@<IP>` şifresiz girmeli. |
 
-- [ ] **Sistemi Güncelle**: `apt update && apt upgrade -y`
-- [ ] **Hostname Ayarla**: `hostnamectl set-hostname sunucu-adi`
-- [ ] **Yeni Kullanıcı Oluştur**: `adduser deployer`
-- [ ] **Sudo Yetkisi Ver**: `usermod -aG sudo deployer`
-- [ ] **SSH Key Kopyala**: Local makinenizden `ssh-copy-id deployer@ip-adresi`
+## 2. SSH Hardening (Kritik) 🔒
 
-## 2. SSH Hardening (Kritik)
+Dosya: `/etc/ssh/sshd_config`
 
-`/etc/ssh/sshd_config` dosyasında aşağıdaki değişiklikleri yapın ve servisi yeniden başlatın (`systemctl restart ssh`).
+| Parametre                | Değer  | Neden?                               | Doğrulama                                                                        |
+| :----------------------- | :----- | :----------------------------------- | :------------------------------------------------------------------------------- | --------------------------------- |
+| `PermitRootLogin`        | `no`   | Root brute-force engellemek için.    | `ssh root@<IP>` -> **Permission denied** dönmeli.                                |
+| `PasswordAuthentication` | `no`   | Sadece Key ile giriş.                | `ssh -o PubkeyAuthentication=no deployer@<IP>` -> Hata vermeli, şifre sormamalı. |
+| `PermitEmptyPasswords`   | `no`   | Güvenlik.                            | -                                                                                |
+| `Port`                   | `2222` | (Opsiyonel) Log kirliliğini azaltır. | `netstat -tulpn                                                                  | grep sshd` yeni portu göstermeli. |
 
-- [ ] **Root Login Kapat**: `PermitRootLogin no`
-- [ ] **Parola Girişini Kapat**: `PasswordAuthentication no`
-- [ ] **Boş Parolayı Engelle**: `PermitEmptyPasswords no`
-- [ ] **Opsiyonel**: SSH Portunu değiştir (örn: 2222)
+> **Not:** Değişiklikten sonra `sshd -t` (Test Config) yapmadan servisi restart etmeyin!
 
-## 3. Firewall (UFW)
+## 3. Firewall (UFW) 🧱
 
-Asla tüm kapıları açık bırakmayın. "Default Deny" politikasını uygulayın.
+Kural: **Default Deny Incoming.**
 
-- [ ] **UFW Kur**: `apt install ufw`
-- [ ] **Varsayılanları Ayarla**: `ufw default deny incoming`, `ufw default allow outgoing`
-- [ ] **SSH İzni Ver**: `ufw allow ssh` (veya `ufw allow 2222/tcp`)
-- [ ] **Web İzni Ver**: `ufw allow 80/tcp`, `ufw allow 443/tcp`
-- [ ] **UFW Aktifleştir**: `ufw enable`
+```bash
+# Kurulum
+apt install ufw
+ufw default deny incoming
+ufw default allow outgoing
 
-## 4. Otomatik Korumalar
+# İzinler
+ufw allow ssh  # Veya port 2222
+ufw allow 80/tcp
+ufw allow 443/tcp
 
-Siz uyurken sunucunuzu koruyacak servisler.
+# Aktifleştir
+ufw enable
+```
 
-- [ ] **Fail2Ban Kur**: `apt install fail2ban`
-- [ ] **Fail2Ban Aktifleştir**: `systemctl enable --now fail2ban`
-- [ ] **Otomatik Güncelleme**: `apt install unattended-upgrades` ve `dpkg-reconfigure --priority=low unattended-upgrades`
+**✅ Verify Step:**
 
-## 5. Son Kontrol (Reboot)
+```bash
+ufw status verbose
+# Çıktı: "Status: active" ve "Default: deny (incoming)" OLMALIDIR.
+```
 
-- [ ] **Reboot At**: `reboot`
-- [ ] **Yeni Kullanıcı ile Gir**: `ssh deployer@ip-adresi`
-- [ ] **Sudo Dene**: `sudo whoami` (root dönmeli)
+## 4. System Hardening ⚙️
+
+| Ayar            | Dosya/Komut                                                         | Verify                                                                |
+| :-------------- | :------------------------------------------------------------------ | :-------------------------------------------------------------------- |
+| **Timezone**    | `timedatectl set-timezone Europe/Istanbul`                          | `date` komutu doğru saati göstermeli.                                 |
+| **Swapiness**   | `/etc/sysctl.conf` -> `vm.swappiness=10`                            | `cat /proc/sys/vm/swappiness` -> 10 olmalı.                           |
+| **TCP BBR**     | `net.core.default_qdisc=fq` + `net.ipv4.tcp_congestion_control=bbr` | `sysctl net.ipv4.tcp_congestion_control` -> bbr olmalı.               |
+| **Auto Update** | `apt install unattended-upgrades`                                   | `systemctl status unattended-upgrades` -> Active olmalı.              |
+| **Fail2Ban**    | `apt install fail2ban`                                              | `fail2ban-client status sshd` -> Hapisteki (Jail) IP'leri göstermeli. |
+
+## 5. Final Smoke Test 🚬
+
+1.  Sunucuya `reboot` atın.
+2.  Bilgisayarınızdan `ping` atın (Açıldı mı?).
+3.  `ssh deployer@<IP>` ile bağlanın.
+4.  `sudo docker ps` çalıştırın (Hata vermemeli).
