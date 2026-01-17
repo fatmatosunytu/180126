@@ -4,73 +4,186 @@ Bu bölüm, Linux çekirdeğini (kernel) ağ saldırılarına ve yetki yükseltm
 
 > [!NOTE] > **Bu ayarlar ne işe yarar?**
 > Varsayılan Linux ayarları "maksimum uyumluluk" içindir. Biz bunu "maksimum güvenlik" olarak değiştireceğiz.
-> Örneğin: `ICMP Redirect` açık olursa, bir saldırgan trafiğinizi kendi üzerine çekebilir. Biz bunu kapatacağız.
+>
+> 📖 **Detaylı Açıklama:** Hangi ayarın (0 veya 1) ne anlama geldiğini, `rp_filter`, `accept_redirects` gibi terimlerin ne olduğunu merak ediyorsanız [Kernel Parametreleri Sözlüğü (Glossary)](sysctl-glossary.md) sayfasına bakın.
 
 ## 1. Uygulama
 
-`/etc/sysctl.d/99-hardening.conf` adında yeni bir dosya oluşturuyoruz. Bu yöntem (yeni dosya açmak) en temiz yöntemdir, istediğiniz an dosyayı silip eski haline dönebilirsiniz.
+## ⚠️ Docker/Kubernetes Kullanıcıları DİKKAT!
 
-Aşağıdaki komutu kopyalayıp terminale yapıştırın:
+Eğer **Docker** veya **Kubernetes** kullanıyorsanız:
+
+### IP Forwarding KAPATILAMAZ!
 
 ```bash
-sudo tee /etc/sysctl.d/99-hardening.conf << 'EOF'
-# ==============================================
-# NETWORK SAFETY (Ağ Güvenliği)
-# ==============================================
-
-# IP Spoofing Koruması
-# Amaç: Saldırganın IP adresini taklit etmesini (spoof) engeller.
-net.ipv4.conf.all.rp_filter = 1
-net.ipv4.conf.default.rp_filter = 1
-
-# ICMP Redirect Kabulu Kapat
-# Amaç: "Trafiği şuradan dolaştır" diyen sahte paketleri reddeder.
-# (Man-in-the-Middle saldırılarını önler)
-net.ipv4.conf.all.accept_redirects = 0
-net.ipv4.conf.default.accept_redirects = 0
-net.ipv4.conf.all.secure_redirects = 0
-net.ipv4.conf.default.secure_redirects = 0
-net.ipv6.conf.all.accept_redirects = 0
-net.ipv6.conf.default.accept_redirects = 0
-
-# ICMP Redirect Gönderimi Kapat
-# Amaç: Biz bir Router değiliz, kimseye yol tarif etmemize gerek yok.
-net.ipv4.conf.all.send_redirects = 0
-net.ipv4.conf.default.send_redirects = 0
-
-# TCP SYN Flood Koruması
-# Amaç: DoS saldırılarına karşı direnç sağlar (SYN Cookies).
-net.ipv4.tcp_syncookies = 1
-net.ipv4.tcp_max_syn_backlog = 2048
-net.ipv4.tcp_synack_retries = 2
-
-# Yanlış Yönlendirilmiş Paketleri Logla (Martian Packets)
-# Amaç: Olmaması gereken bir yerden paket gelirse loglara yazar.
-net.ipv4.conf.all.log_martians = 1
-
-# ==============================================
-# KERNEL SAFETY (Çekirdek Güvenliği)
-# ==============================================
-
-# Kernel Loglarını (dmesg) Gizle
-# Amaç: Saldırgan kernel hafıza adreslerini görüp exploit yazamasın.
-kernel.dmesg_restrict = 1
-
-# Ptrace Kısıtlaması (Yama)
-# Amaç: Bir sürecin (process) diğerini izlemesini/değiştirmesini engeller.
-kernel.yama.ptrace_scope = 1
-
-# SUID Core Dump Kapat
-# Amaç: Yetkili bir program çökerse, hafızasını diske yazmasın (İçinde şifre olabilir).
-fs.suid_dumpable = 0
-
-# Kernel Pointer Adreslerini Gizle
-# Amaç: Exploit geliştirmeyi çok daha zor hale getirir.
-kernel.kptr_restrict = 2
-EOF
+# Bu satırları YORUMA ALIN veya SİLİN:
+# net.ipv4.conf.all.forwarding = 0
+# net.ipv6.conf.all.forwarding = 0
 ```
 
-## 2. Aktifleştirme
+**Neden?** Docker container'lar arası iletişim için IP forwarding gerekir.
+
+**Kontrol:**
+
+```bash
+# Docker varsa:
+docker ps &>/dev/null && echo "Docker aktif, forwarding=1 olmalı"
+
+# Forwarding durumu:
+sysctl net.ipv4.conf.all.forwarding
+# Docker çalışıyorsa çıktı: 1 (normal)
+```
+
+## IPv6 Kapalıysa
+
+Eğer IPv6 kapalıysa (örn: `sysctl -a | grep ipv6` boş çıkıyorsa), IPv6 ayarları hata verecektir. Bu **normaldir**, görmezden gelin.
+
+---
+
+## 1. Hazırlık ve Envanter 📋
+
+Kernel ayarlarını değiştirmek risklidir. Önce sistemimizde ne var ne yok bakalım.
+
+```bash
+# Docker veya Kubernetes var mı?
+command -v docker &>/dev/null && echo "⚠️ Docker bulundu: IP Forwarding KAPATILMAMALI!" || echo "✅ Docker yok, Forwarding kapatılabilir."
+```
+
+## 2. Mevcut Ayarları Yedekle 💾
+
+Bir şeyler ters giderse geri dönmek için:
+
+```bash
+sudo sysctl -a > ~/sysctl-backup-$(date +%Y%m%d).conf
+echo "Yedek alındı: Ana dizine kaydedildi."
+```
+
+## 3. Geçici Test (Reboot ile Sıfırlanır) 🧪
+
+Ayarları hemen kalıcı yapmayın. Önce geçici olarak uygulayıp sunucunun çalışıp çalışmadığını (SSH, Web, Docker) test edin.
+
+```bash
+# === AĞ GÜVENLİĞİ ===
+sudo sysctl -w net.ipv4.conf.all.rp_filter=1
+sudo sysctl -w net.ipv4.conf.default.rp_filter=1
+sudo sysctl -w net.ipv4.conf.all.accept_redirects=0
+sudo sysctl -w net.ipv4.tcp_syncookies=1
+
+# === KERNEL GÜVENLİĞİ ===
+sudo sysctl -w kernel.dmesg_restrict=1
+sudo sysctl -w kernel.yama.ptrace_scope=1
+sudo sysctl -w fs.suid_dumpable=0
+sudo sysctl -w kernel.sysrq=176
+
+echo "✅ Geçici ayarlar uygulandı. Şimdi SSH ve servisleri test edin!"
+```
+
+> **Sorun Çıktı mı?** Sunucuyu yeniden başlatın (`reboot`). Her şey eski haline döner.
+
+## 4. Kalıcı Uygulama (Scenario Seçimi) 🚀
+
+Testler başarılıysa ayarları kalıcı yapalım. Durumunuza uygun profili seçin:
+
+=== "🅰️ Senaryo A: Sade Sunucu (Docker YOK)"
+
+    Docker, Kubernetes veya VPN **KULLANMIYORSANIZ** bu en güvenli profildir. `IP Forwarding` kapatılır.
+
+    ```bash
+    sudo tee /etc/sysctl.d/99-hardening.conf << 'EOF'
+    # ==============================================
+    # NETWORK SAFETY - SADE SUNUCU (NO DOCKER)
+    # ==============================================
+
+    # IP Forwarding KAPAT (Docker yoksa güvenli)
+    net.ipv4.conf.all.forwarding = 0
+    net.ipv6.conf.all.forwarding = 0
+
+    # IP Spoofing & Source Routing
+    net.ipv4.conf.all.rp_filter = 1
+    net.ipv4.conf.default.rp_filter = 1
+    net.ipv4.conf.all.accept_source_route = 0
+    net.ipv4.conf.default.accept_source_route = 0
+
+    # ICMP Redirect Kapat
+    net.ipv4.conf.all.accept_redirects = 0
+    net.ipv4.conf.default.accept_redirects = 0
+    net.ipv4.conf.all.secure_redirects = 0
+    net.ipv4.conf.default.secure_redirects = 0
+
+    # TCP SYN Flood & Keepalive
+    net.ipv4.tcp_syncookies = 1
+    net.ipv4.tcp_max_syn_backlog = 2048
+    net.ipv4.tcp_synack_retries = 2
+    net.ipv4.tcp_keepalive_time = 600
+
+    # ICMP Rate Limiting
+    net.ipv4.icmp_ratelimit = 100
+
+    # ==============================================
+    # KERNEL SAFETY
+    # ==============================================
+    kernel.dmesg_restrict = 1
+    kernel.yama.ptrace_scope = 1
+    fs.suid_dumpable = 0
+    kernel.kptr_restrict = 2
+    kernel.sysrq = 176
+    dev.tty.ldisc_autoload = 0
+    net.core.bpf_jit_harden = 2
+    kernel.unprivileged_bpf_disabled = 1
+    kernel.perf_event_paranoid = 3
+    EOF
+    ```
+
+=== "🅱️ Senaryo B: Docker/Kubernetes Sunucusu"
+
+    Docker veya Kubernetes **KULLANIYORSANIZ** bu profili kullanın. `IP Forwarding` açık bırakılır.
+
+    ```bash
+    sudo tee /etc/sysctl.d/99-hardening.conf << 'EOF'
+    # ==============================================
+    # NETWORK SAFETY - DOCKER/K8S PROFİLİ
+    # ==============================================
+
+    # ⚠️ IP Forwarding AÇIK KALMALI (Yoksa Container'lar bozulur!)
+    # net.ipv4.conf.all.forwarding = 1
+
+    # IP Spoofing & Source Routing
+    net.ipv4.conf.all.rp_filter = 1
+    net.ipv4.conf.default.rp_filter = 1
+    net.ipv4.conf.all.accept_source_route = 0
+    net.ipv4.conf.default.accept_source_route = 0
+
+    # ICMP Redirect Kapat
+    net.ipv4.conf.all.accept_redirects = 0
+    net.ipv4.conf.default.accept_redirects = 0
+    net.ipv4.conf.all.secure_redirects = 0
+    net.ipv4.conf.default.secure_redirects = 0
+
+    # TCP SYN Flood & Keepalive
+    net.ipv4.tcp_syncookies = 1
+    net.ipv4.tcp_max_syn_backlog = 2048
+    net.ipv4.tcp_synack_retries = 2
+    net.ipv4.tcp_keepalive_time = 600
+
+    # ICMP Rate Limiting
+    net.ipv4.icmp_ratelimit = 100
+
+    # ==============================================
+    # KERNEL SAFETY
+    # ==============================================
+    kernel.dmesg_restrict = 1
+    kernel.yama.ptrace_scope = 1
+    fs.suid_dumpable = 0
+    kernel.kptr_restrict = 2
+    kernel.sysrq = 176
+    dev.tty.ldisc_autoload = 0
+    net.core.bpf_jit_harden = 2
+    kernel.unprivileged_bpf_disabled = 1
+    kernel.perf_event_paranoid = 3
+    EOF
+    ```
+
+## 3. Aktifleştirme
 
 Ayarları sisteme yüklemek için:
 
@@ -78,18 +191,27 @@ Ayarları sisteme yüklemek için:
 sudo sysctl --system
 ```
 
-## 3. Doğrulama
+## 4. Doğrulama
 
-Ayarların gerçekten uygulandığını kontrol edelim. Örneğin `accept_redirects` değeri `0` olmalı:
+Tüm ayarları kontrol et:
 
 ```bash
-sysctl net.ipv4.conf.all.accept_redirects
-# Çıktı şu olmalı: net.ipv4.conf.all.accept_redirects = 0
+# Tüm hardening ayarlarını göster:
+sudo sysctl -a | grep -E "rp_filter|accept_redirects|tcp_syncookies|dmesg_restrict|ptrace_scope"
 ```
 
-## 4. Sorun Çıkarsa (Geri Alma)
+**Beklenen Çıktı (Örnekler):**
 
-Eğer bu ayarlar uygulamanızı bozarsa (örneğin Kubernetes veya özel network modülleri bazen IP Forwarding ister), dosyayı silip ayarları eski haline getirebilirsiniz.
+```
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.tcp_syncookies = 1
+kernel.dmesg_restrict = 1
+kernel.yama.ptrace_scope = 1
+```
+
+## 5. Sorun Çıkarsa (Geri Alma)
+
+Eğer bu ayarlar uygulamanızı bozarsa (örneğin Kubernetes IP Forwarding ister), dosyayı silip ayarları eski haline getirebilirsiniz.
 
 ```bash
 # 1. Dosyayı sil
