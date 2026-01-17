@@ -1,61 +1,142 @@
-# Otomasyon Vizyonu: Server Setup as a Service
+# Otomasyon Rehberi: GitHub Actions 🤖
 
-Bu rehberde anlatılan onlarca adımı (SSH, Firewall, Docker vb.) her yeni sunucuda elle yapmak hem zaman kaybıdır hem de hata riskini artırır. Hedefimiz, bu süreci "Tek Tık" haline getirmektir.
+Sürekli sunucuya girip `git pull`, `docker compose up -d` yapmaktan yoruldunuz mu?
+GitHub Actions ile "Push to Deploy" (Kodu at, sunucu güncellensin) yapısını kuralım.
 
-## 1. Konsept: Infrastructure as Code (IaC)
+## 1. Mantık Nedir?
 
-Sunucularımız "evcil hayvan" (Pet) değil, "büyükbaş hayvan" (Cattle) gibi olmalıdır. Bozulunca tamir etmekle uğraşmak yerine silip yenisini saniyeler içinde kurabilmeliyiz.
+1.  Bilgisayarınızda kodu düzenler ve `git push` yaparsınız.
+2.  GitHub bunu görür ve **Action** (işçi) başlatır.
+3.  GitHub'ın işçisi, sizin sunucunuza **SSH** ile bağlanır.
+4.  Belirlediğiniz komutları (örn: `deploy.sh`) çalıştırır.
 
-### Araçlar Savaşı: Terraform vs Ansible
+---
 
-Piyasada iki dev vardır. Bizim senaryomuz için hangisi uygun?
+## 2. Hazırlık (Secrets) 🔐
 
-| Araç          | Görevi                   | Analoji                   | Bizim İçin Uygunluk                                                                        |
-| :------------ | :----------------------- | :------------------------ | :----------------------------------------------------------------------------------------- |
-| **Terraform** | Altyapı Oluşturucu       | Müteahhit (Binayı diker)  | ❌ **Düşük:** Müşterinin çok gizli `API Key`lerini ister. Güvenlik riski yüksektir.        |
-| **Ansible**   | Konfigürasyon Yöneticisi | İç Mimar (Eşyaları dizer) | ✅ **Yüksek:** Sadece `IP` ve `SSH Key` yeterlidir. Cloud bağımsızdır (Her yerde çalışır). |
+Sunucu şifrenizi kodun içine (yml dosyasına) **ASLA** yazmayın. GitHub'ın "Secrets" kasasını kullanın.
 
-> [!TIP] > **Karar:** "Hizmet Olarak Kurulum" vereceksek, müşteriden en az yetkiyi isteyen **Ansible** ile ilerlemek en mantıklısıdır. Müşteri sunucusunu açar, bize IP verir, biz de gidip kurulumu yaparız.
+1.  GitHub Reponuz -> **Settings** -> **Secrets and variables** -> **Actions** -> **New repository secret**.
+2.  Şu bilgileri ekleyin:
 
-## 2. Mimari Modeller
+| Secret Adı | Değer (Örnek)           | Açıklama                                  |
+| :--------- | :---------------------- | :---------------------------------------- |
+| `HOST_IP`  | `1.2.3.4`               | Sunucunuzun IP adresi.                    |
+| `SSH_USER` | `deployer`              | Bağlanacak kullanıcı (root kullanmayın).  |
+| `SSH_KEY`  | `-----BEGIN OPENSSH...` | Private Key'inizin (`id_ed25519`) tamamı. |
 
-Gelecekte kurmayı planladığımız sistemin iki farklı versiyonu olabilir:
+> **İpucu:** Private Key'i almak için: `cat ~/.ssh/id_ed25519` (Kendi bilgisayarınızdaki değil, sunucuya erişimi olan bir key olmalı. Genelde yeni bir key pair üretilip Public olan sunucuya, Private olan GitHub'a verilir.)
 
-### Model A: GitHub Actions (Push-Based)
+---
 
-En maliyetsiz ve hızlı yöntemdir.
+## 3. Workflow Dosyası (`.yml`) 📄
 
-1.  **Repo:** Tüm ayarlar (Monitoring, Docker, Güvenlik) bir GitHub reposunda durur.
-2.  **Tetikleyici:** Müşteri `hosts.ini` dosyasına yeni sunucu IP'sini ekleyip `git push` yapar.
-3.  **Action:** GitHub Actions, Ansible'ı çalıştırır.
-4.  **Sonuç:** GitHub sunucuya SSH ile bağlanır ve kurulumu tamamlar.
+Reponuzda `.github/workflows/deploy.yml` dosyasını oluşturun ve yapıştırın:
 
-```mermaid
-graph LR
-    User[Kullanıcı] -- IP Ekler & Push --> GitHub[GitHub Repo]
-    GitHub -- Action Tetiklenir --> Ansible[Ansible Runner]
-    Ansible -- SSH (Port 22) --> Server[Yeni VPS]
-    Server -- Raporlar --> User
+```yaml
+name: Deploy to Server 🚀
+
+# Ne zaman çalışsın? (Sadece main branch'e push gelince)
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Pre-Flight Check (Uçuş Öncesi Kontrol) 🛡️
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 2222
+          script: |
+            # 1. Disk Dolu mu? (>%90 ise Dur)
+            if [ $(df / | awk 'NR==2 {print $5}' | tr -d %) -gt 90 ]; then
+              echo "❌ DISK DOLU! Deploy iptal ediliyor."
+              exit 1
+            fi
+
+            # 2. Docker çalışıyor mu?
+            if ! systemctl is-active --quiet docker; then
+               echo "❌ Docker çalışmıyor!"
+               exit 1
+            fi
+            echo "✅ Sistem deploy için uygun."
+
+      - name: Copy Files via SCP (Dosyaları Yükle)
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 2222
+          source: "."
+          target: "/home/${{ secrets.SSH_USER }}/app"
+
+      - name: Execute Remote SSH (Komut Çalıştır)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 2222
+          script: |
+            echo "🚀 Deployment Basliyor..."
+            cd /home/${{ secrets.SSH_USER }}/app
+
+            # Scriptlere izin ver
+            chmod +x docs/scripts/library/*.sh
+
+            # Docker containerlari yenile (Ornek)
+            # docker compose down && docker compose up -d --build
+
+            # Bakım scriptini çalıştır 
+            ./docs/scripts/library/maintenance.sh
+
+            echo "✅ Deployment Tamamlandi!"
 ```
 
-### Model B: Merkezi Kontrol Kulesi (SaaS - UI)
+---
 
-Tam ticari "SaaS" modelidir.
+## 4. Kritik: Ne Yapılır, Ne Yapılmaz? (Do's & Don'ts) 🛑
 
-1.  **Web Panel:** Müşteri bizim web sitemize girer.
-2.  **Form:** Sunucu IP'sini ve root şifresini (veya geçici key'i) girer.
-3.  **Backend:** Bizim sunucumuz (Jenkins / Ansible Tower) kuyruğa bir iş atar.
-4.  **Worker:** İşçiler sırayla sunuculara bağlanıp kurulumu yapar.
+GitHub Actions çok güçlüdür ama yanlış kullanılırsa sunucuyu patlatır.
 
-## 3. İlk Adım (MVP): Shell Script (Mevcut Durum)
+### ✅ YAPILMASI GEREKENLER (Do's)
 
-Henüz Ansible'a geçmeden önce, mevcut `server-init.sh` scriptimiz "V0.1" olarak iş görmektedir.
+- **Idempotent Scriptler Yazın:** Scriptiniz 100 kere de çalışsa hata vermemeli.
+  - _Kötü:_ `mkdir /app` (Klasör varsa hata verir, CI durur).
+  - _İyi:_ `mkdir -p /app` (Varsa geçer, yoksa kurar).
+- **Önce Staging:** Ana sunucuya (`main` branch) yollamadan önce, test sunucusunda (`dev` branch) deneyin.
+- **SSH Timeout:** Bağlantı koparsa ne olacağını planlayın (`timeout` komutları kullanın).
 
-```bash
-# Otomatik kurulum scripti (Linux/Mac)
-curl -O https://raw.githubusercontent.com/your-repo/handbook/main/scripts/server-init.sh
-chmod +x server-init.sh
-./server-init.sh
-```
+### ❌ YAPILMAMASI GEREKENLER (Don'ts)
 
-_(Scriptin detaylı içeriği bu sayfanın eski versiyonlarında mevcuttu, şimdi Ansible playbooklarına evriliyoruz.)_
+- **Root Kullanmak:** Asla `root` ile bağlanmayın. Bir hata tüm sunucuyu siler.
+- **Hassas Veri:** `.env` dosyasını repoya atmayın. Onu sunucuda elle oluşturun veya GitHub Secrets ile enjekte edin.
+- **Database Migration:** Otomatik yapmayın! Veri kaybı riski vardır. DB işlerini manuel ve yedekli yapın.
+
+---
+
+## 5. Güvenlik Uyarısı ⚠️
+
+Bu yöntemde GitHub'a (Microsoft'a) sunucunuzun anahtarını veriyorsunuz.
+
+- **Risk:** GitHub hacklenirse veya hesabınız çalınırsa sunucunuza girebilirler.
+- **Önlem 1:** GitHub hesabınızda **2FA (İki Aşamalı Doğrulama)** mutlaka açık olsun.
+- **Önlem 2:** Kullandığınız SSH Key'i sunucuda `root` yetkisine boğmayın. Sadece deploy yapabilen kısıtlı bir kullanıcı (`deployer`) kullanın.
+
+## 6. Özet
+
+Bu yapı kurulduktan sonra:
+
+1.  Kodda değişiklik yap.
+2.  `git push origin main` de.
+3.  Arkanı yaslan, GitHub 1 dakika içinde sunucunu güncellesin. ☕
