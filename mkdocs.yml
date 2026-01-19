@@ -113,6 +113,7 @@ nav:
               - Ag & Port: reference/commands/network.md
               - Docker Komutlari: reference/commands/docker.md
               - Sistem & Servis: reference/commands/system.md
+              - Git ve Docker: git-docker.md
   - Guvenlik:
       - Genel: security/index.md
       - SSH Hardening: security/ssh.md
