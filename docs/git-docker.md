@@ -37,6 +37,8 @@ Biyoinformatik araçlarını (Blast, Gromacs vb.) kurmak zordur. Docker, bu ara�
 ### 2.2 İlk Docker Denemesi
 Docker kurulumunu hello-world imajını çalıştırarak doğruladım. Kurulum sürecinde BIOS sanallaştırma hatası, WSL kilitlenmesi ve Docker Hub kimlik doğrulama adımlarını başarıyla geçtim. Sistem şu an biyoinformatik konteynerlerini çalıştırmaya tamamen hazır.
 
+---
+
 ## Bölüm 3: Gerçek Dünya Uygulaması - BLAST
 Biyoinformatik analizleri için karmaşık kurulum süreçlerini Docker ile saniyeler içine indirdim.
 
@@ -48,3 +50,24 @@ Aşağıdaki komutla, sisteme hiçbir kurulum yapmadan BLAST aracını çalışt
 `docker run --rm ncbi/blast blastn -version`
 
 **Sonuç:** Yazılım başarıyla yanıt verdi ve analiz yapmaya hazır olduğunu kanıtladı.
+
+---
+
+## Bölüm 4: İlk Biyoinformatik Analizi - DNA Hizalama (Alignment)
+Docker konteyneri ile yerel dosyalarımı bağlayarak gerçek bir analiz gerçekleştirdim.
+
+### 4.1 Dosya Bağlama (Volume Mounting)
+Bilgisayarımdaki `query.fasta` ve `subject.fasta` dosyalarını Docker'a tanıtmak için `-v "$(pwd)":/data` parametresini kullandım.
+
+### 4.2 Teknik Sorun Giderme: Path Conversion
+Windows Git Bash terminalinde dosya yollarının yanlış yorumlanması sebebiyle "File is not accessible" hatası alınmıştır. Bu sorun, komutun başına `MSYS_NO_PATHCONV=1` eklenerek profesyonelce çözülmüştür.
+
+---
+
+## Bölüm 5: Analiz Sonuçlarının Raporlanması
+Kısa DNA dizileri (16 bp) üzerinde yapılan ilk denemede varsayılan filtreler nedeniyle sonuç alınamamıştır (No hits found).
+
+### 5.1 Hassasiyet Artırımı ve Çıktı Alma
+* **Çözüm:** `-task blastn-short` parametresi ile analiz hassasiyeti kısa diziler için optimize edilmiştir.
+* **Kalıcı Kayıt:** Analiz sonuçları ekrana basılmak yerine `-out /data/analiz_sonucu.txt` komutuyla doğrudan proje klasörüme kaydedilmiştir.
+* **Doğrulama:** Oluşturulan metin dosyası incelenmiş ve diziler arasındaki %100 eşleşme raporlanmıştır.
