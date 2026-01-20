@@ -19,11 +19,12 @@ Hangi dosyalarda değişiklik yaptığımızı gösterir.
 ### 1.3 Git İş Akışı: Değişiklikleri Kaydetmek ve Göndermek
 Yaptığımız her değişikliği GitHub'a göndermek için üç aşamalı bir yol izleriz. Bu süreci "hazırlanma, mühürleme ve kargolama" olarak düşünebiliriz.
 
-Adım 1: git add . (Hazırlık) Değişiklik yaptığımız tüm dosyaları "takip listesine" ekler. Nokta (.) işareti "her şeyi ekle" demektir.
+**Adım 1:** git add . (Hazırlık) Değişiklik yaptığımız tüm dosyaları "takip listesine" ekler. Nokta (.) işareti "her şeyi ekle" demektir.
 
-Adım 2: git commit -m "mesajınız" (Mühürleme) Hazırlanan değişikliklere bir isim vererek dondurur. Mesaj kısmına ne yaptığınızı (örn: "hata düzeltildi") yazmalısınız.
+**Adım 2:** git commit -m "mesajınız" (Mühürleme) Hazırlanan değişikliklere bir isim vererek dondurur. Mesaj kısmına ne yaptığınızı (örn: "hata düzeltildi") yazmalısınız.
 
-Adım 3: git push (Kargolama) Kendi bilgisayarınızda dondurduğunuz bu paketleri internetteki (GitHub) sunucuya fırlatır.
+**Adım 3:** git push (Kargolama) Kendi bilgisayarınızda dondurduğunuz bu paketleri internetteki (GitHub) sunucuya fırlatır.
+
 ---
 
 ## Bölüm 2: Docker (Sanal Laboratuvar) 🐳
