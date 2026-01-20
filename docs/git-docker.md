@@ -35,4 +35,3 @@ Biyoinformatik araçlarını (Blast, Gromacs vb.) kurmak zordur. Docker, bu ara�
 * Versiyon çakışmalarını önler.
 
 ### 2.2 İlk Docker Denemesi
-*(Süleyman burada gerçek bir komut denemeni istiyor. Örneğin 'hello-world' konteynerini çalıştırıp sonucunu buraya yaz)*
