@@ -35,3 +35,4 @@ Biyoinformatik araçlarını (Blast, Gromacs vb.) kurmak zordur. Docker, bu ara�
 * Versiyon çakışmalarını önler.
 
 ### 2.2 İlk Docker Denemesi
+Docker kurulumunu hello-world imajını çalıştırarak doğruladım. Kurulum sürecinde BIOS sanallaştırma hatası, WSL kilitlenmesi ve Docker Hub kimlik doğrulama adımlarını başarıyla geçtim. Sistem şu an biyoinformatik konteynerlerini çalıştırmaya tamamen hazır.
