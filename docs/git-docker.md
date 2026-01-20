@@ -37,9 +37,14 @@ Biyoinformatik araçlarını (Blast, Gromacs vb.) kurmak zordur. Docker, bu ara�
 ### 2.2 İlk Docker Denemesi
 Docker kurulumunu hello-world imajını çalıştırarak doğruladım. Kurulum sürecinde BIOS sanallaştırma hatası, WSL kilitlenmesi ve Docker Hub kimlik doğrulama adımlarını başarıyla geçtim. Sistem şu an biyoinformatik konteynerlerini çalıştırmaya tamamen hazır.
 
-## Bölüm 3: Gerçek Dünya Uygulaması: BLAST
-Biyoinformatik araçlarını geleneksel yöntemlerle kurmak zaman kaybıdır. Docker ile NCBI BLAST aracını tek komutla ayağa kaldırdım:
+## Bölüm 3: Gerçek Dünya Uygulaması - BLAST
+Biyoinformatik analizleri için karmaşık kurulum süreçlerini Docker ile saniyeler içine indirdim.
 
-docker pull ncbi/blast ile resmi imajı sisteme dahil ettim.
+### 3.1 BLAST İmajını Çekmek
+`docker pull ncbi/blast` komutuyla NCBI'ın resmi BLAST yazılımını konteyner olarak sisteme dahil ettim.
 
-docker run --rm ncbi/blast blastn -version komutuyla kurulumsuz analiz yeteneğini doğruladım.
+### 3.2 Kurulumsuz Analiz Doğrulaması
+Aşağıdaki komutla, sisteme hiçbir kurulum yapmadan BLAST aracını çalıştırdım:
+`docker run --rm ncbi/blast blastn -version`
+
+**Sonuç:** Yazılım başarıyla yanıt verdi ve analiz yapmaya hazır olduğunu kanıtladı.
