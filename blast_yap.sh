@@ -1,10 +1,17 @@
 #!/bin/bash
-# Süleyman'ın Ödevi: BLAST Otomasyon Scripti
+# Süleyman'ın Fabrika Hattı: Toplu BLAST Analizi
 
-echo "--- BLAST Analizi Baslatiliyor ---"
+echo "--- Biyoinformatik Fabrikasi Calisiyor ---"
 
-# 1. Dosya yollarını Windows/Docker uyumlu hale getirerek çalıştır
-MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd)":/data ncbi/blast \
-blastn -query /data/query.fasta -subject /data/subject.fasta -task blastn-short -out /data/otomatik_rapor.txt
+# Klasördeki 'btd_' ile başlayan tüm .fasta dosyalarını bul ve dön
+for dosya in btd_*.fasta; do
+    echo "Su an analiz edilen dosya: $dosya"
+    
+    # Docker penceresini aç ve analizi yap
+    MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd)":/data ncbi/blast \
+    blastn -query "/data/$dosya" -subject /data/subject.fasta -out "/data/sonuc_$dosya.txt"
+    
+    echo "$dosya icin analiz tamamlandi. Rapor: sonuc_$dosya.txt"
+done
 
-echo "--- Analiz Bitti! Sonuç 'otomatik_rapor.txt' dosyasına kaydedildi. ---"
+echo "--- Tum işlemler bitti! ---"

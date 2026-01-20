@@ -71,3 +71,8 @@ Kısa DNA dizileri (16 bp) üzerinde yapılan ilk denemede varsayılan filtreler
 * **Çözüm:** `-task blastn-short` parametresi ile analiz hassasiyeti kısa diziler için optimize edilmiştir.
 * **Kalıcı Kayıt:** Analiz sonuçları ekrana basılmak yerine `-out /data/analiz_sonucu.txt` komutuyla doğrudan proje klasörüme kaydedilmiştir.
 * **Doğrulama:** Oluşturulan metin dosyası incelenmiş ve diziler arasındaki %100 eşleşme raporlanmıştır.
+
+---
+
+## Bölüm 6: Ölçeklenebilirlik - For Döngüsü ile Toplu Analiz
+BTD geni üzerinden yaptığım analizde, for döngüsü kullanarak birden fazla klinik varyantı tek komutla analiz ettim. Bu sayede manuel hata payını sıfıra indirdim ve süreci otomatize ettim.
