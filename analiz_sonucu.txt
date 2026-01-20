@@ -1,0 +1,74 @@
+BLASTN 2.17.0+
+
+
+Reference: Stephen F. Altschul, Thomas L. Madden, Alejandro A.
+Schaffer, Jinghui Zhang, Zheng Zhang, Webb Miller, and David J.
+Lipman (1997), "Gapped BLAST and PSI-BLAST: a new generation of
+protein database search programs", Nucleic Acids Res. 25:3389-3402.
+
+
+
+Database: User specified sequence set (Input: /data/subject.fasta).
+           1 sequences; 16 total letters
+
+
+
+Query= Sorgu_DNA
+
+Length=16
+                                                                      Score     E
+Sequences producing significant alignments:                          (Bits)  Value
+
+Hedef_DNA                                                             32.2    3e-08
+
+
+> Hedef_DNA
+Length=16
+
+ Score = 32.2 bits (16),  Expect = 3e-08
+ Identities = 16/16 (100%), Gaps = 0/16 (0%)
+ Strand=Plus/Plus
+
+Query  1   ATGCATGCATGCATGC  16
+           ||||||||||||||||
+Sbjct  1   ATGCATGCATGCATGC  16
+
+
+ Score = 28.2 bits (14),  Expect = 5e-07
+ Identities = 14/14 (100%), Gaps = 0/14 (0%)
+ Strand=Plus/Minus
+
+Query  1   ATGCATGCATGCAT  14
+           ||||||||||||||
+Sbjct  14  ATGCATGCATGCAT  1
+
+
+ Score = 28.2 bits (14),  Expect = 5e-07
+ Identities = 14/14 (100%), Gaps = 0/14 (0%)
+ Strand=Plus/Minus
+
+Query  3   GCATGCATGCATGC  16
+           ||||||||||||||
+Sbjct  16  GCATGCATGCATGC  3
+
+
+
+Lambda      K        H
+    1.37    0.711     1.31 
+
+Gapped
+Lambda      K        H
+    1.37    0.711     1.31 
+
+Effective search space used: 169
+
+
+  Database: User specified sequence set (Input: /data/subject.fasta).
+    Posted date:  Unknown
+  Number of letters in database: 16
+  Number of sequences in database:  1
+
+
+
+Matrix: blastn matrix 1 -3
+Gap Penalties: Existence: 5, Extension: 2
